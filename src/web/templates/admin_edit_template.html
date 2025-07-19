@@ -275,7 +275,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTemplatePreview();
     
     // Load audio files after segments are added
-    loadAudioFiles();
+    setTimeout(() => {
+        loadAudioFiles();
+    }, 100);
 });
 
 function loadAudioFiles() {
@@ -442,15 +444,17 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
             duration: segment.querySelector('input[readonly]').value || null
         };
         
-        const audioSource = segment.querySelector('select').value;
-        if (audioSource === 'ai') {
-            segmentData.audio_source = 'ai';
-            segmentData.ai_prompt = segment.querySelector('input[placeholder*="prompt"]').value;
-        } else if (audioSource === 'upload') {
-            segmentData.audio_source = 'upload';
-            segmentData.audio_file = segment.querySelector('.upload-options select').value;
-        } else {
-            segmentData.audio_source = 'episode';
+        const audioSourceSelect = segment.querySelector('select');
+        if (audioSourceSelect) {
+            const audioSource = audioSourceSelect.value;
+            if (audioSource === 'ai') {
+                segmentData.audio_source = 'ai';
+                segmentData.ai_prompt = segment.querySelector('input[placeholder*="prompt"]').value;
+            } else if (audioSource === 'upload') {
+                segmentData.audio_source = 'upload';
+                const audioFileSelect = segment.querySelector('.upload-options select');
+                segmentData.audio_file = audioFileSelect ? audioFileSelect.value : '';
+            }
         }
         
         formData.content.segments.push(segmentData);
@@ -525,7 +529,6 @@ function addSegment(type) {
                             <select class="form-select" onchange="toggleAudioOptions(this)">
                                 <option value="upload">Upload File</option>
                                 <option value="ai">Generate with AI</option>
-                                <option value="episode">Episode Audio</option>
                             </select>
                         </div>
                         

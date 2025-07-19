@@ -263,14 +263,19 @@ function deleteTemplate() {
         fetch('/api/v1/templates/{{ template.id }}', {
             method: 'DELETE',
             headers: {
-                'Authorization': 'Bearer {{ session.get("token", "") }}'
+                'Authorization': 'Bearer {{ session.get("token", "") }}',
+                'Content-Type': 'application/json'
             }
         })
         .then(function(response) {
             if (response.ok) {
                 window.location.href = '/admin/templates';
             } else {
-                alert('Failed to delete template');
+                response.json().then(function(data) {
+                    alert('Failed to delete template: ' + (data.error || 'Unknown error'));
+                }).catch(function() {
+                    alert('Failed to delete template');
+                });
             }
         })
         .catch(function(error) {
