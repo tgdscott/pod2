@@ -315,18 +315,39 @@ function loadAudioFiles() {
             musicSelect.value = existingTemplate.structure.music.file_id;
         }
         
-        // Populate all segment audio file dropdowns
+        // Populate segment audio file dropdowns with category filtering
         document.querySelectorAll('.upload-options select').forEach(select => {
+            const segment = select.closest('.segment-item');
+            const segmentType = segment ? segment.dataset.segmentType : null;
+            
             select.innerHTML = '<option value="">Select audio file...</option>';
+            
             files.forEach(file => {
                 // Use the correct field names from the API
                 const fileId = file.db_id || file.id;
-                const fileName = file.filename || file.name;
+                const fileName = file.db_name || file.filename || file.name;
+                const fileCategory = file.db_category || file.category;
                 
-                const option = document.createElement('option');
-                option.value = fileId;
-                option.textContent = fileName;
-                select.appendChild(option);
+                // Filter files based on segment type
+                let shouldInclude = false;
+                
+                if (segmentType === 'intro') {
+                    shouldInclude = fileCategory === 'intro' || fileName.toLowerCase().includes('intro');
+                } else if (segmentType === 'outro') {
+                    shouldInclude = fileCategory === 'outro' || fileName.toLowerCase().includes('outro');
+                } else if (segmentType === 'transition') {
+                    shouldInclude = fileCategory === 'transition' || fileName.toLowerCase().includes('transition');
+                } else {
+                    // For other types, include all audio files
+                    shouldInclude = true;
+                }
+                
+                if (shouldInclude) {
+                    const option = document.createElement('option');
+                    option.value = fileId;
+                    option.textContent = fileName;
+                    select.appendChild(option);
+                }
             });
             
             // Set the saved audio file value if it exists
@@ -377,7 +398,7 @@ function addSegmentFromData(segmentData) {
                         <div class="col-12 audio-source-section" ${segmentData.type === 'content' ? 'style="display: none;"' : ''}>
                             <label class="form-label">Audio Source</label>
                             <select class="form-select" onchange="toggleAudioOptions(this)">
-                                <option value="upload" ${segmentData.audio_source === 'upload' ? 'selected' : ''}>Upload File</option>
+                                <option value="upload" ${segmentData.audio_source === 'upload' ? 'selected' : ''}>Choose Audio File</option>
                                 <option value="ai" ${segmentData.audio_source === 'ai' ? 'selected' : ''}>Generate with AI</option>
                             </select>
                         </div>
@@ -537,7 +558,7 @@ function addSegment(type) {
                         <div class="col-12 audio-source-section" ${type === 'content' ? 'style="display: none;"' : ''}>
                             <label class="form-label">Audio Source</label>
                             <select class="form-select" onchange="toggleAudioOptions(this)">
-                                <option value="upload">Upload File</option>
+                                <option value="upload" selected>Choose Audio File</option>
                                 <option value="ai">Generate with AI</option>
                             </select>
                         </div>
@@ -557,7 +578,7 @@ function addSegment(type) {
                             </div>
                         </div>
                         
-                        <div class="col-12 upload-options" style="display: none;">
+                        <div class="col-12 upload-options" style="display: block;">
                             <label class="form-label">Audio File</label>
                             <select class="form-select">
                                 <option value="">Select audio file...</option>
