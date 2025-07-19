@@ -58,7 +58,7 @@
             <div class="card-body">
                 <p class="text-muted mb-3">Manage intros, outros, and music beds</p>
                 <div class="d-grid gap-2">
-                    <a href="/admin/audio-files" class="btn btn-primary">
+                    <a href="/admin/files" class="btn btn-primary">
                         <i class="fas fa-list me-2"></i>View All Files
                     </a>
                     <a href="/admin/audio-files/upload" class="btn btn-success">
@@ -73,10 +73,10 @@
                     {% for file in audio_files[:3] %}
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="fw-bold">{{ file.original_filename }}</div>
-                            <small class="text-muted">{{ file.file_type }}</small>
+                            <div class="fw-bold">{{ file.db_name or file.filename }}</div>
+                            <small class="text-muted">{{ file.db_category or 'uncategorized' }} • {{ file.size_mb }} MB</small>
                         </div>
-                        <a href="/admin/audio-files/{{ file.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <a href="/admin/files" class="btn btn-sm btn-outline-primary">Edit</a>
                     </div>
                     {% endfor %}
                 </div>
@@ -161,6 +161,9 @@
                 
                 <hr>
                 <div class="d-grid gap-2">
+                    <a href="/admin/settings" class="btn btn-outline-primary">
+                        <i class="fas fa-key me-2"></i>API Settings
+                    </a>
                     <a href="/admin/system" class="btn btn-outline-secondary">
                         <i class="fas fa-cog me-2"></i>System Settings
                     </a>
@@ -186,8 +189,8 @@
                 </a>
             </div>
             <div class="col-md-3">
-                <a href="/admin/audio-files/upload" class="btn btn-outline-success w-100">
-                    <i class="fas fa-upload me-2"></i>Upload Audio
+                <a href="/admin/files" class="btn btn-outline-success w-100">
+                    <i class="fas fa-folder-open me-2"></i>Manage Files
                 </a>
             </div>
             <div class="col-md-3">
@@ -196,10 +199,360 @@
                 </a>
             </div>
             <div class="col-md-3">
-                <a href="/admin/backup" class="btn btn-outline-warning w-100">
+                <a href="/admin/settings" class="btn btn-outline-warning w-100">
+                    <i class="fas fa-key me-2"></i>API Settings
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/admin/backup" class="btn btn-outline-secondary w-100">
                     <i class="fas fa-download me-2"></i>Backup Data
                 </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Keys Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-key me-2"></i>API Configuration</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>One-time Setup:</strong> Configure your API keys for AI services. These are stored securely and only need to be set once.
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">ElevenLabs API Key</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key">
+                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('elevenlabsKey')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="form-text">Required for AI voice generation</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Google Gemini API Key</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="geminiKey" placeholder="Enter your Google Gemini API key">
+                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('geminiKey')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="form-text">For AI content generation</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">OpenAI API Key</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="openaiKey" placeholder="Enter your OpenAI API key">
+                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('openaiKey')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="form-text">For Whisper transcription</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Spreaker API Key</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="spreakerKey" placeholder="Enter your Spreaker API key">
+                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('spreakerKey')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="form-text">For podcast publishing</div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <button type="button" class="btn btn-primary" onclick="saveApiKeys()">
+                <i class="fas fa-save me-2"></i>Save API Keys
+            </button>
+            <button type="button" class="btn btn-outline-secondary ms-2" onclick="testApiKeys()">
+                <i class="fas fa-test-tube me-2"></i>Test Connections
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Default Voice Settings -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-microphone me-2"></i>Default AI Voice Settings</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Time Saver:</strong> Set your preferred AI voice as default. It will be automatically selected when creating new AI segments.
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Default Voice</label>
+                <select class="form-select" id="defaultVoice">
+                    <option value="">Loading available voices...</option>
+                </select>
+                <div class="form-text">This voice will be pre-selected for new AI segments</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Voice Stability</label>
+                <input type="range" class="form-range" id="defaultStability" min="0" max="1" step="0.01" value="0.5">
+                <div class="form-text">
+                    <span id="stabilityValue">0.5</span> - 
+                    <span id="stabilityDescription">Balanced (Good for most content)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <button type="button" class="btn btn-primary" onclick="saveDefaultVoice()">
+                <i class="fas fa-save me-2"></i>Save Default Voice
+            </button>
+            <button type="button" class="btn btn-outline-secondary ms-2" onclick="testDefaultVoice()">
+                <i class="fas fa-play me-2"></i>Test Voice
+            </button>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+<script>
+let authToken = '{{ token }}';
+
+// Check if we have a valid token
+if (!authToken || authToken === 'None' || authToken === '') {
+    console.error('No authentication token available');
+}
+
+function togglePasswordVisibility(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = field.nextElementSibling;
+    const icon = button.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function saveApiKeys() {
+    const formData = {
+        api_keys: {
+            elevenlabs: document.getElementById('elevenlabsKey').value,
+            gemini: document.getElementById('geminiKey').value,
+            openai: document.getElementById('openaiKey').value,
+            spreaker: document.getElementById('spreakerKey').value
+        }
+    };
+    
+    // Don't send masked values
+    Object.keys(formData.api_keys).forEach(key => {
+        if (formData.api_keys[key] === '••••••••••••••••') {
+            delete formData.api_keys[key];
+        }
+    });
+    
+    fetch('/api/v1/settings/api-keys', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('API keys saved successfully!');
+        } else {
+            alert('Error saving API keys: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving API keys. Please try again.');
+    });
+}
+
+function testApiKeys() {
+    alert('Testing API connections...');
+    
+    fetch('/api/v1/settings/test-connections', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let message = 'API Test Results:\n';
+            Object.keys(data.results).forEach(service => {
+                const result = data.results[service];
+                message += `${service}: ${result.success ? '✅' : '❌'} ${result.message}\n`;
+            });
+            alert(message);
+        } else {
+            alert('Error testing connections: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error testing connections. Please try again.');
+    });
+}
+
+// Load available voices when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadAvailableVoices();
+    loadDefaultVoiceSettings();
+    
+    // Add stability slider listener
+    const stabilitySlider = document.getElementById('defaultStability');
+    if (stabilitySlider) {
+        stabilitySlider.addEventListener('input', updateStabilityDisplay);
+    }
+});
+
+function loadAvailableVoices() {
+    fetch('/api/v1/voices/', {
+        headers: {
+            'Authorization': `Bearer ${authToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const voiceSelect = document.getElementById('defaultVoice');
+            voiceSelect.innerHTML = '<option value="">Select a default voice...</option>';
+            
+            data.voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.voice_id;
+                option.textContent = `${voice.name} (${voice.category})`;
+                voiceSelect.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading voices:', error);
+    });
+}
+
+function loadDefaultVoiceSettings() {
+    fetch('/api/v1/settings/default-voice', {
+        headers: {
+            'Authorization': `Bearer ${authToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.settings) {
+            document.getElementById('defaultVoice').value = data.settings.voice_id || '';
+            document.getElementById('defaultStability').value = data.settings.stability || 0.5;
+            updateStabilityDisplay();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading default voice settings:', error);
+    });
+}
+
+function updateStabilityDisplay() {
+    const slider = document.getElementById('defaultStability');
+    const value = document.getElementById('stabilityValue');
+    const description = document.getElementById('stabilityDescription');
+    
+    const stabilityValue = parseFloat(slider.value);
+    value.textContent = stabilityValue.toFixed(2);
+    
+    let desc = '';
+    if (stabilityValue < 0.3) {
+        desc = 'Very Expressive (Great for storytelling)';
+    } else if (stabilityValue < 0.6) {
+        desc = 'Balanced (Good for most content)';
+    } else if (stabilityValue < 0.8) {
+        desc = 'Stable (Good for news/formal content)';
+    } else {
+        desc = 'Very Stable (Consistent but less expressive)';
+    }
+    description.textContent = desc;
+}
+
+function saveDefaultVoice() {
+    const formData = {
+        voice_id: document.getElementById('defaultVoice').value,
+        stability: parseFloat(document.getElementById('defaultStability').value)
+    };
+    
+    fetch('/api/v1/settings/default-voice', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Default voice settings saved successfully!');
+        } else {
+            alert('Error saving default voice: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving default voice. Please try again.');
+    });
+}
+
+function testDefaultVoice() {
+    const voiceId = document.getElementById('defaultVoice').value;
+    if (!voiceId) {
+        alert('Please select a voice first');
+        return;
+    }
+    
+    alert('Testing voice preview... This will generate a short sample using your default voice.');
+    
+    fetch('/api/v1/voices/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+            voice_id: voiceId,
+            text: 'Hello! This is a test of your default voice setting.',
+            stability: parseFloat(document.getElementById('defaultStability').value)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Voice test completed! Check your audio output.');
+        } else {
+            alert('Error testing voice: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error testing voice. Please try again.');
+    });
+}
+</script>
         </div>
     </div>
 </div>

@@ -12,9 +12,17 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 import librosa
 import soundfile as sf
+import json
+import shutil
+from datetime import datetime
 
 from src.database import get_db_session
 from src.database.models_dev import UserFile, User
+from src.database.models import File
+from src.database import get_db_session
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from src.database import get_db_session
+from src.database.models_dev import User
 
 files_bp = Blueprint('files', __name__)
 
@@ -53,6 +61,43 @@ def get_audio_duration(file_path):
     except Exception as e:
         current_app.logger.error(f"Error getting audio duration: {str(e)}")
         return None
+
+
+def get_file_info(file_path):
+    """Get detailed file information including audio metadata"""
+    try:
+        if not os.path.exists(file_path):
+            return None
+            
+        file_info = {
+            'size': os.path.getsize(file_path),
+            'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
+            'created': datetime.fromtimestamp(os.path.getctime(file_path)).isoformat(),
+        }
+        
+        # Get audio-specific metadata if it's an audio file
+        audio_extensions = {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg'}
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        if file_ext in audio_extensions:
+            try:
+                y, sr = librosa.load(file_path, sr=None)
+                duration = librosa.get_duration(y=y, sr=sr)
+                file_info.update({
+                    'duration': round(duration, 2),
+                    'sample_rate': sr,
+                    'channels': y.shape[1] if len(y.shape) > 1 else 1,
+                    'audio_type': 'audio'
+                })
+            except Exception as e:
+                file_info['audio_type'] = 'audio (error reading metadata)'
+                file_info['error'] = str(e)
+        else:
+            file_info['audio_type'] = 'other'
+            
+        return file_info
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @files_bp.route('/upload', methods=['POST'])
@@ -100,31 +145,43 @@ def upload_file():
         if file_extension in ALLOWED_AUDIO_EXTENSIONS:
             duration = get_audio_duration(file_path)
         
-        # Save to database
+        # Get form data
+        category = request.form.get('category', 'uncategorized')
+        description = request.form.get('description', '')
+        auto_organize = request.form.get('auto_organize', 'false').lower() == 'true'
+        extract_metadata = request.form.get('extract_metadata', 'true').lower() == 'true'
+        
+        # Save to database using new File model
         db = get_db_session()
         try:
-            user_file = UserFile(
+            relative_path = str(file_path.relative_to(Path(current_app.config['UPLOAD_FOLDER'])))
+            relative_path = relative_path.replace('\\', '/').replace('\x00', '')
+            
+            db_file = File(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
-                original_filename=filename,
-                stored_filename=stored_filename,
-                file_path=str(file_path.relative_to(Path(current_app.config['UPLOAD_FOLDER']))),
-                file_type='audio' if file_extension in ALLOWED_AUDIO_EXTENSIONS else 'image',
+                file_path=relative_path,
+                name=filename,
+                description=description,
+                category=category,
+                file_size=file_size,
                 mime_type=file.content_type,
-                file_size=file_size
+                duration=duration
             )
             
-            db.add(user_file)
+            db.add(db_file)
             db.commit()
             
             return {
                 'message': 'File uploaded successfully',
                 'file': {
-                    'id': str(user_file.id),
+                    'id': str(db_file.id),
                     'name': filename,
                     'size': file_size,
                     'duration': duration,
-                    'type': user_file.file_type
+                    'type': 'audio' if file_extension in ALLOWED_AUDIO_EXTENSIONS else 'image',
+                    'category': category,
+                    'description': description
                 }
             }, 201
             
@@ -228,63 +285,7 @@ def upload_audio_files():
         return {'error': 'Failed to upload files'}, 500
 
 
-@files_bp.route('/', methods=['GET'])
-@jwt_required()
-def get_files():
-    """Get user's files"""
-    try:
-        user_id = get_jwt_identity()
-        db = get_db_session()
-        
-        try:
-            # Get query parameters
-            file_type = request.args.get('type')
-            reference_type = request.args.get('reference_type')
-            page = int(request.args.get('page', 1))
-            per_page = min(int(request.args.get('per_page', 20)), 100)
-            
-            # Calculate offset
-            offset = (page - 1) * per_page
-            
-            # Build query
-            query = db.query(UserFile).filter(UserFile.user_id == user_id)
-            
-            if file_type:
-                query = query.filter(UserFile.file_type == file_type)
-            
-            if reference_type:
-                query = query.filter(UserFile.reference_type == reference_type)
-            
-            # Get files with pagination
-            files = query.order_by(UserFile.created_at.desc())\
-                        .offset(offset)\
-                        .limit(per_page)\
-                        .all()
-            
-            # Get total count
-            total_query = db.query(UserFile).filter(UserFile.user_id == user_id)
-            if file_type:
-                total_query = total_query.filter(UserFile.file_type == file_type)
-            if reference_type:
-                total_query = total_query.filter(UserFile.reference_type == reference_type)
-            total = total_query.count()
-            
-            return {
-                'files': [file.to_dict() for file in files],
-                'pagination': {
-                    'page': page,
-                    'per_page': per_page,
-                    'total': total,
-                    'pages': (total + per_page - 1) // per_page
-                }
-            }
-            
-        finally:
-            db.close()
-        
-    except Exception as e:
-        current_app.logger.error(f"Get files error: {str(e)}")
-        return {'error': 'Failed to get files'}, 500
+
 
 
 @files_bp.route('/<file_id>', methods=['GET'])
@@ -388,3 +389,370 @@ def delete_file(file_id):
     except Exception as e:
         current_app.logger.error(f"Delete file error: {str(e)}")
         return {'error': 'Failed to delete file'}, 500
+
+
+@files_bp.route('/', methods=['GET'])
+@jwt_required()
+def list_files():
+    """List all uploaded files with metadata"""
+    try:
+        current_user_id = get_jwt_identity()
+        session = get_db_session()
+        current_user = session.query(User).filter(User.id == current_user_id).first()
+        if not current_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        files = []
+        
+        # Get files from database first
+        db_files = session.query(File).filter_by(user_id=current_user.id).all()
+        db_file_paths = {f.file_path: f for f in db_files}
+        
+        # Scan upload directory for user's files
+        user_upload_dir = os.path.join(upload_folder, str(current_user_id))
+        if not os.path.exists(user_upload_dir):
+            return jsonify({
+                'success': True,
+                'files': [],
+                'total_count': 0,
+                'total_size_mb': 0
+            })
+        
+        for root, dirs, filenames in os.walk(user_upload_dir):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                relative_path = os.path.relpath(file_path, upload_folder)
+                
+                # Ensure the path uses forward slashes and doesn't contain null bytes
+                relative_path = relative_path.replace('\\', '/').replace('\x00', '')
+                
+                # Skip files that don't belong to this user
+                if not relative_path.startswith(str(current_user_id) + '/'):
+                    continue
+                
+                # Get file info
+                file_info = get_file_info(file_path)
+                if not file_info:
+                    continue
+                    
+                # Get database record if exists
+                db_file = db_file_paths.get(relative_path)
+                
+                file_data = {
+                    'filename': filename,
+                    'path': relative_path,
+                    'full_path': file_path,
+                    'size': file_info['size'],
+                    'size_mb': round(file_info['size'] / (1024 * 1024), 2),
+                    'modified': file_info['modified'],
+                    'created': file_info['created'],
+                    'audio_type': file_info.get('audio_type', 'other'),
+                    'duration': file_info.get('duration'),
+                    'sample_rate': file_info.get('sample_rate'),
+                    'channels': file_info.get('channels'),
+                    'db_id': db_file.id if db_file else None,
+                    'db_name': db_file.name if db_file else None,
+                    'db_description': db_file.description if db_file else None,
+                    'db_category': db_file.category if db_file else None
+                }
+                
+                files.append(file_data)
+        
+        # Sort by modified date (newest first)
+        files.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'files': files,
+            'total_count': len(files),
+            'total_size_mb': round(sum(f['size'] for f in files) / (1024 * 1024), 2)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@files_bp.route('/<path:file_path>', methods=['GET'])
+@jwt_required()
+def get_file_by_path(file_path):
+    current_user_id = get_jwt_identity()
+    session = get_db_session()
+    current_user = session.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    """Get detailed information about a specific file"""
+    try:
+        # URL decode the file path
+        import urllib.parse
+        file_path = urllib.parse.unquote(file_path)
+        
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        full_path = os.path.join(upload_folder, file_path)
+        
+        if not os.path.exists(full_path):
+            return jsonify({'success': False, 'error': 'File not found'}), 404
+            
+        file_info = get_file_info(full_path)
+        if not file_info:
+            return jsonify({'success': False, 'error': 'Error reading file'}), 500
+            
+        # Get database record
+        session = get_db_session()
+        db_file = session.query(File).filter_by(file_path=file_path, user_id=current_user.id).first()
+        
+        file_data = {
+            'filename': os.path.basename(file_path),
+            'path': file_path,
+            'full_path': full_path,
+            'size': file_info['size'],
+            'size_mb': round(file_info['size'] / (1024 * 1024), 2),
+            'modified': file_info['modified'],
+            'created': file_info['created'],
+            'audio_type': file_info.get('audio_type', 'other'),
+            'duration': file_info.get('duration'),
+            'sample_rate': file_info.get('sample_rate'),
+            'channels': file_info.get('channels'),
+            'db_id': db_file.id if db_file else None,
+            'db_name': db_file.name if db_file else None,
+            'db_description': db_file.description if db_file else None,
+            'db_category': db_file.category if db_file else None
+        }
+        
+        return jsonify({'success': True, 'file': file_data})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@files_bp.route('/<path:file_path>', methods=['DELETE'])
+@jwt_required()
+def delete_file_by_path(file_path):
+    current_user_id = get_jwt_identity()
+    session = get_db_session()
+    current_user = session.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    """Delete a specific file"""
+    try:
+        # URL decode the file path
+        import urllib.parse
+        file_path = urllib.parse.unquote(file_path)
+        
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        full_path = os.path.join(upload_folder, file_path)
+        
+        if not os.path.exists(full_path):
+            return jsonify({'success': False, 'error': 'File not found'}), 404
+            
+        # Check if file is in user's uploads (normalize paths for comparison)
+        normalized_full_path = os.path.abspath(full_path)
+        normalized_upload_folder = os.path.abspath(upload_folder)
+        if not normalized_full_path.startswith(normalized_upload_folder):
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+            
+        # Get file size before deletion for response
+        file_size = os.path.getsize(full_path)
+        
+        # Delete from database first
+        session = get_db_session()
+        db_file = session.query(File).filter_by(file_path=file_path, user_id=current_user.id).first()
+        if db_file:
+            session.delete(db_file)
+            session.commit()
+        
+        # Delete file
+        os.remove(full_path)
+        
+        # Clean up empty directories
+        directory = os.path.dirname(full_path)
+        while directory != upload_folder and os.path.exists(directory):
+            try:
+                if not os.listdir(directory):  # Directory is empty
+                    os.rmdir(directory)
+                    directory = os.path.dirname(directory)
+                else:
+                    break
+            except OSError:
+                break
+        
+        return jsonify({
+            'success': True,
+            'message': 'File deleted successfully',
+            'deleted_file': file_path,
+            'size_mb': round(file_size / (1024 * 1024), 2)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@files_bp.route('/bulk-delete', methods=['POST'])
+@jwt_required()
+def bulk_delete_files():
+    current_user_id = get_jwt_identity()
+    session = get_db_session()
+    current_user = session.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    """Delete multiple files at once"""
+    try:
+        data = request.get_json()
+        file_paths = data.get('file_paths', [])
+        
+        if not file_paths:
+            return jsonify({'success': False, 'error': 'No files specified'}), 400
+            
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        deleted_files = []
+        failed_files = []
+        total_size = 0
+        
+        for file_path in file_paths:
+            try:
+                # URL decode the file path
+                import urllib.parse
+                file_path = urllib.parse.unquote(file_path)
+                
+                full_path = os.path.join(upload_folder, file_path)
+                
+                if not os.path.exists(full_path):
+                    failed_files.append({'path': file_path, 'error': 'File not found'})
+                    continue
+                    
+                # Check if file is in user's uploads (normalize paths for comparison)
+                normalized_full_path = os.path.abspath(full_path)
+                normalized_upload_folder = os.path.abspath(upload_folder)
+                if not normalized_full_path.startswith(normalized_upload_folder):
+                    failed_files.append({'path': file_path, 'error': 'Access denied'})
+                    continue
+                    
+                # Get file size
+                file_size = os.path.getsize(full_path)
+                total_size += file_size
+                
+                # Delete from database
+                session = get_db_session()
+                db_file = session.query(File).filter_by(file_path=file_path, user_id=current_user.id).first()
+                if db_file:
+                    session.delete(db_file)
+                
+                # Delete file
+                os.remove(full_path)
+                deleted_files.append({
+                    'path': file_path,
+                    'size_mb': round(file_size / (1024 * 1024), 2)
+                })
+                
+            except Exception as e:
+                failed_files.append({'path': file_path, 'error': str(e)})
+        
+        # Commit database changes
+        session.commit()
+        
+        # Clean up empty directories
+        directories_to_check = set()
+        for file_path in file_paths:
+            full_path = os.path.join(upload_folder, file_path)
+            directory = os.path.dirname(full_path)
+            directories_to_check.add(directory)
+        
+        for directory in directories_to_check:
+            while directory != upload_folder and os.path.exists(directory):
+                try:
+                    if not os.listdir(directory):
+                        os.rmdir(directory)
+                        directory = os.path.dirname(directory)
+                    else:
+                        break
+                except OSError:
+                    break
+        
+        return jsonify({
+            'success': True,
+            'deleted_files': deleted_files,
+            'failed_files': failed_files,
+            'total_deleted': len(deleted_files),
+            'total_failed': len(failed_files),
+            'total_size_mb': round(total_size / (1024 * 1024), 2)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@files_bp.route('/<path:file_path>/metadata', methods=['PUT'])
+@jwt_required()
+def update_file_metadata(file_path):
+    current_user_id = get_jwt_identity()
+    session = get_db_session()
+    current_user = session.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    """Update file metadata in database"""
+    try:
+        # URL decode the file path
+        import urllib.parse
+        file_path = urllib.parse.unquote(file_path)
+        data = request.get_json()
+        name = data.get('name')
+        description = data.get('description')
+        category = data.get('category')
+        
+        # Get or create database record
+        session = get_db_session()
+        db_file = session.query(File).filter_by(file_path=file_path, user_id=current_user.id).first()
+        
+        if not db_file:
+            # Create new record
+            db_file = File(
+                id=str(uuid.uuid4()),
+                user_id=current_user.id,
+                file_path=file_path,
+                name=name or os.path.basename(file_path),
+                description=description or '',
+                category=category or 'uncategorized'
+            )
+            session.add(db_file)
+        else:
+            # Update existing record
+            if name is not None:
+                db_file.name = name
+            if description is not None:
+                db_file.description = description
+            if category is not None:
+                db_file.category = category
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'File metadata updated successfully',
+            'file': {
+                'id': db_file.id,
+                'name': db_file.name,
+                'description': db_file.description,
+                'category': db_file.category
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@files_bp.route('/categories', methods=['GET'])
+@jwt_required()
+def get_file_categories():
+    current_user_id = get_jwt_identity()
+    session = get_db_session()
+    current_user = session.query(User).filter(User.id == current_user_id).first()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    """Get all file categories used by the user"""
+    try:
+        session = get_db_session()
+        categories = session.query(File.category).filter_by(user_id=current_user.id).distinct().all()
+        category_list = [cat[0] for cat in categories if cat[0]]
+        
+        return jsonify({
+            'success': True,
+            'categories': category_list
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

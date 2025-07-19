@@ -76,6 +76,8 @@ def create_app(config_name: str = 'development') -> Flask:
     from src.api.templates import templates_bp
     from src.api.jobs import jobs_bp
     from src.api.files import files_bp
+    from src.api.voices import voices_bp
+    from src.api.settings import settings_bp
     from src.web import web_bp
     
     # API routes with versioning
@@ -85,6 +87,8 @@ def create_app(config_name: str = 'development') -> Flask:
     app.register_blueprint(templates_bp, url_prefix='/api/v1/templates')
     app.register_blueprint(jobs_bp, url_prefix='/api/v1/jobs')
     app.register_blueprint(files_bp, url_prefix='/api/v1/files')
+    app.register_blueprint(voices_bp, url_prefix='/api/v1/voices')
+    app.register_blueprint(settings_bp, url_prefix='/api/v1/settings')
     
     # Web interface routes
     app.register_blueprint(web_bp)

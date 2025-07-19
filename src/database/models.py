@@ -49,9 +49,15 @@ class User(Base, TimestampMixin):
     settings = Column(JSON, default=dict)
     
     # Encrypted API keys
-    elevenlabs_key = Column(Text)
-    gemini_key = Column(Text)
+    elevenlabs_api_key = Column(Text)
+    gemini_api_key = Column(Text)
+    openai_api_key = Column(Text)
+    spreaker_api_key = Column(Text)
     hosting_keys = Column(JSON, default=dict)
+    
+    # Default voice settings
+    default_voice_id = Column(String(100))
+    default_voice_stability = Column(Integer, default=50)  # 0-100 scale
     
     # Relationships
     podcasts = relationship("Podcast", back_populates="user", cascade="all, delete-orphan")
@@ -504,6 +510,54 @@ class TemplateSegment(Base, TimestampMixin):
             'has_dynamic_content': self.has_dynamic_content,
             'dynamic_content_config': self.dynamic_content_config,
             'is_public': self.is_public,
+            'usage_count': self.usage_count,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
+
+class File(Base, TimestampMixin):
+    """File metadata and organization"""
+    __tablename__ = 'files'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'file_path', name='unique_user_file_path'),
+    )
+    
+    id = Column(UUID, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(UUID, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    
+    # File details
+    file_path = Column(Text, nullable=False)  # Relative path from upload root
+    name = Column(String(200))  # User-friendly name
+    description = Column(Text)  # User description
+    category = Column(String(100), default='uncategorized')  # User-defined category
+    
+    # File metadata (cached from file system)
+    file_size = Column(BigInteger)  # Size in bytes
+    mime_type = Column(String(100))
+    duration = Column(Integer)  # Duration in seconds for audio files
+    sample_rate = Column(Integer)  # Sample rate for audio files
+    channels = Column(Integer)  # Number of channels for audio files
+    
+    # Usage tracking
+    usage_count = Column(Integer, default=0)
+    
+    # Relationships
+    user = relationship("User")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for API responses"""
+        return {
+            'id': str(self.id),
+            'file_path': self.file_path,
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'file_size': self.file_size,
+            'mime_type': self.mime_type,
+            'duration': self.duration,
+            'sample_rate': self.sample_rate,
+            'channels': self.channels,
             'usage_count': self.usage_count,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()

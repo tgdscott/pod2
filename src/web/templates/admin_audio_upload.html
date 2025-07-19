@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Audio Files - PodcastPro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-upload"></i> Upload Audio Files</h1>
+                <div>
+                    <a href="/admin/files" class="btn btn-outline-secondary">
+                        <i class="fas fa-folder-open"></i> Back to Files
+                    </a>
+                </div>
+            </div>
+
+            <!-- Upload Area -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload Audio Files</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Drag & Drop Zone -->
+                            <div id="uploadZone" class="upload-zone">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <h4>Drag & Drop Audio Files</h4>
+                                    <p class="text-muted">or click to browse</p>
+                                    <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
+                                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                        <i class="fas fa-folder-open"></i> Choose Files
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- File List -->
+                            <div id="fileList" class="mt-4" style="display: none;">
+                                <h6>Selected Files</h6>
+                                <div id="selectedFiles"></div>
+                            </div>
+
+                            <!-- Upload Progress -->
+                            <div id="uploadProgress" class="mt-4" style="display: none;">
+                                <h6>Upload Progress</h6>
+                                <div id="progressContainer"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <!-- Upload Settings -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Upload Settings</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Category</label>
+                                        <select class="form-select" id="categorySelect">
+                                            <option value="">Select Category</option>
+                                            <option value="intros">Intros</option>
+                                            <option value="outros">Outros</option>
+                                            <option value="music">Background Music</option>
+                                            <option value="transitions">Transitions</option>
+                                            <option value="sound-effects">Sound Effects</option>
+                                            <option value="commercials">Commercials</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Description</label>
+                                        <textarea class="form-control" id="defaultDescription" rows="3" placeholder="Optional description for uploaded files"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoOrganize" checked>
+                                            <label class="form-check-label" for="autoOrganize">
+                                                Auto-organize by category
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="extractMetadata" checked>
+                                            <label class="form-check-label" for="extractMetadata">
+                                                Extract audio metadata
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-success w-100" id="uploadBtn" onclick="uploadFiles()" disabled>
+                                        <i class="fas fa-upload"></i> Upload Files
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- File Types Info -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Supported Formats</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled mb-0">
+                                        <li><i class="fas fa-music text-success"></i> MP3</li>
+                                        <li><i class="fas fa-music text-success"></i> WAV</li>
+                                        <li><i class="fas fa-music text-success"></i> FLAC</li>
+                                        <li><i class="fas fa-music text-success"></i> M4A</li>
+                                        <li><i class="fas fa-music text-success"></i> AAC</li>
+                                        <li><i class="fas fa-music text-success"></i> OGG</li>
+                                    </ul>
+                                    <small class="text-muted">Max file size: 500MB</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Uploads -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Uploads</h5>
+                </div>
+                <div class="card-body">
+                    <div id="recentUploads">
+                        <p class="text-muted text-center">No recent uploads</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Success Modal -->
+<div class="modal fade" id="uploadSuccessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Complete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <p class="text-muted" id="uploadSummary"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="/admin/files" class="btn btn-primary">View Files</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.upload-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-zone:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.upload-zone.dragover {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+
+.upload-content {
+    pointer-events: none;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+}
+
+.file-item .file-info {
+    flex: 1;
+    margin-left: 10px;
+}
+
+.file-item .file-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.file-item .file-size {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.file-item .file-remove {
+    color: #dc3545;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.progress-item {
+    margin-bottom: 15px;
+}
+
+.progress-item .progress-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.progress-item .progress-filename {
+    font-weight: 500;
+    flex: 1;
+}
+
+.progress-item .progress-percentage {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let authToken = '{{ token }}';
+let selectedFiles = [];
+let uploadQueue = [];
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    if (!authToken) {
+        showAlert('Authentication required. Please log in.', 'danger');
+        return;
+    }
+    setupUploadZone();
+    loadRecentUploads();
+});
+
+function setupUploadZone() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+
+    // Drag and drop events
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        handleFileSelection(files);
+    });
+
+    // Click to browse
+    uploadZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        handleFileSelection(files);
+    });
+}
+
+function handleFileSelection(files) {
+    const audioFiles = files.filter(file => file.type.startsWith('audio/'));
+    
+    if (audioFiles.length === 0) {
+        showAlert('Please select audio files only.', 'warning');
+        return;
+    }
+
+    // Add files to selection
+    audioFiles.forEach(file => {
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+            selectedFiles.push(file);
+        }
+    });
+
+    updateFileList();
+    updateUploadButton();
+}
+
+function updateFileList() {
+    const fileList = document.getElementById('fileList');
+    const selectedFilesDiv = document.getElementById('selectedFiles');
+
+    if (selectedFiles.length === 0) {
+        fileList.style.display = 'none';
+        return;
+    }
+
+    fileList.style.display = 'block';
+    selectedFilesDiv.innerHTML = selectedFiles.map((file, index) => `
+        <div class="file-item">
+            <i class="fas fa-music text-primary"></i>
+            <div class="file-info">
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${formatFileSize(file.size)}</div>
+            </div>
+            <i class="fas fa-times file-remove" onclick="removeFile(${index})"></i>
+        </div>
+    `).join('');
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updateFileList();
+    updateUploadButton();
+}
+
+function updateUploadButton() {
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.disabled = selectedFiles.length === 0;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function uploadFiles() {
+    if (selectedFiles.length === 0) return;
+
+    const uploadBtn = document.getElementById('uploadBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const uploadProgress = document.getElementById('uploadProgress');
+
+    uploadBtn.disabled = true;
+    uploadProgress.style.display = 'block';
+
+    const category = document.getElementById('categorySelect').value;
+    const description = document.getElementById('defaultDescription').value;
+    const autoOrganize = document.getElementById('autoOrganize').checked;
+    const extractMetadata = document.getElementById('extractMetadata').checked;
+
+    let successCount = 0;
+    let errorCount = 0;
+    const results = [];
+
+    // Create progress bars
+    progressContainer.innerHTML = selectedFiles.map((file, index) => `
+        <div class="progress-item" id="progress-${index}">
+            <div class="progress-header">
+                <span class="progress-filename">${file.name}</span>
+                <span class="progress-percentage">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    `).join('');
+
+    // Upload files one by one
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('category', category);
+            formData.append('description', description);
+            formData.append('auto_organize', autoOrganize);
+            formData.append('extract_metadata', extractMetadata);
+
+            const response = await fetch('/api/v1/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                results.push(result);
+                successCount++;
+                updateProgress(i, 100, 'success');
+            } else {
+                const error = await response.json();
+                results.push({ error: error.error || 'Upload failed' });
+                errorCount++;
+                updateProgress(i, 100, 'error');
+            }
+
+        } catch (error) {
+            results.push({ error: error.message });
+            errorCount++;
+            updateProgress(i, 100, 'error');
+        }
+    }
+
+    // Show results
+    showUploadResults(successCount, errorCount, results);
+    
+    // Reset form
+    selectedFiles = [];
+    updateFileList();
+    updateUploadButton();
+    uploadProgress.style.display = 'none';
+    uploadBtn.disabled = false;
+
+    // Refresh recent uploads
+    loadRecentUploads();
+}
+
+function updateProgress(index, percentage, status) {
+    const progressItem = document.getElementById(`progress-${index}`);
+    const progressBar = progressItem.querySelector('.progress-bar');
+    const percentageSpan = progressItem.querySelector('.progress-percentage');
+
+    progressBar.style.width = `${percentage}%`;
+    percentageSpan.textContent = `${percentage}%`;
+
+    if (status === 'success') {
+        progressBar.classList.add('bg-success');
+    } else if (status === 'error') {
+        progressBar.classList.add('bg-danger');
+    }
+}
+
+function showUploadResults(successCount, errorCount, results) {
+    const modal = document.getElementById('uploadSuccessModal');
+    const summary = document.getElementById('uploadSummary');
+    
+    if (successCount > 0 && errorCount === 0) {
+        summary.textContent = `Successfully uploaded ${successCount} file(s)!`;
+    } else if (successCount > 0 && errorCount > 0) {
+        summary.textContent = `Uploaded ${successCount} file(s), ${errorCount} failed.`;
+    } else {
+        summary.textContent = `Upload failed for all ${errorCount} file(s).`;
+    }
+
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+
+async function loadRecentUploads() {
+    try {
+        const response = await fetch('/api/v1/files', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const recentUploads = document.getElementById('recentUploads');
+            
+            if (data.files && data.files.length > 0) {
+                const recentFiles = data.files.slice(0, 5); // Show last 5 files
+                recentUploads.innerHTML = recentFiles.map(file => `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="fw-bold">${file.db_name || file.filename}</div>
+                            <small class="text-muted">${file.size_mb} MB • ${file.db_category || 'uncategorized'}</small>
+                        </div>
+                        <small class="text-muted">${formatDate(file.modified)}</small>
+                    </div>
+                `).join('');
+            } else {
+                recentUploads.innerHTML = '<p class="text-muted text-center">No recent uploads</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading recent uploads:', error);
+    }
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString();
+}
+
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %} 

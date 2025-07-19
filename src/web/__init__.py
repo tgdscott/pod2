@@ -311,7 +311,7 @@ def admin():
         audio_files = []
         templates = []
     
-    return render_template('admin.html', stats=stats, podcasts=podcasts, audio_files=audio_files, templates=templates)
+    return render_template('admin.html', stats=stats, podcasts=podcasts, audio_files=audio_files, templates=templates, token=session.get('token'))
 
 @web_bp.route('/admin/podcasts')
 def admin_podcasts():
@@ -331,7 +331,7 @@ def admin_podcasts():
     except Exception as e:
         podcasts = []
     
-    return render_template('admin_podcasts.html', podcasts=podcasts)
+    return render_template('admin_podcasts.html', podcasts=podcasts, token=session.get('token'))
 
 @web_bp.route('/admin/podcasts/new')
 def admin_new_podcast():
@@ -340,7 +340,7 @@ def admin_new_podcast():
     if 'token' not in session:
         return redirect(url_for('web.login'))
     
-    return render_template('admin_new_podcast.html')
+    return render_template('admin_new_podcast.html', token=session.get('token'))
 
 @web_bp.route('/admin/podcasts/<podcast_id>')
 def admin_podcast_detail(podcast_id):
@@ -362,7 +362,7 @@ def admin_podcast_detail(podcast_id):
     if not podcast:
         return redirect(url_for('web.admin_podcasts'))
     
-    return render_template('admin_podcast_detail.html', podcast=podcast)
+    return render_template('admin_podcast_detail.html', podcast=podcast, token=session.get('token'))
 
 @web_bp.route('/admin/templates')
 def admin_templates():
@@ -382,7 +382,7 @@ def admin_templates():
     except Exception as e:
         templates = []
     
-    return render_template('admin_templates.html', templates=templates)
+    return render_template('admin_templates.html', templates=templates, token=session.get('token'))
 
 @web_bp.route('/admin/templates/new')
 def admin_new_template():
@@ -402,7 +402,7 @@ def admin_new_template():
     except Exception as e:
         podcasts = []
     
-    return render_template('admin_new_template.html', podcasts=podcasts)
+    return render_template('admin_new_template.html', podcasts=podcasts, token=session.get('token'))
 
 @web_bp.route('/admin/templates/<template_id>')
 def admin_template_detail(template_id):
@@ -424,4 +424,31 @@ def admin_template_detail(template_id):
     if not template:
         return redirect(url_for('web.admin_templates'))
     
-    return render_template('admin_template_detail.html', template=template)
+    return render_template('admin_template_detail.html', template=template, token=session.get('token'))
+
+@web_bp.route('/admin/files')
+def admin_files():
+    """File management admin page"""
+    # Check if user is logged in
+    if 'token' not in session:
+        return redirect(url_for('web.login'))
+    
+    return render_template('admin_files.html', token=session.get('token'))
+
+@web_bp.route('/admin/audio-files/upload')
+def admin_audio_upload():
+    """Audio file upload page"""
+    # Check if user is logged in
+    if 'token' not in session:
+        return redirect(url_for('web.login'))
+    
+    return render_template('admin_audio_upload.html', token=session.get('token'))
+
+@web_bp.route('/admin/settings')
+def admin_settings():
+    """Settings management page"""
+    # Check if user is logged in
+    if 'token' not in session:
+        return redirect(url_for('web.login'))
+    
+    return render_template('admin_settings.html', token=session.get('token'))

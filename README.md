@@ -1,102 +1,360 @@
-# PodcastPro v2 - Universal Podcast Creation Platform
+# 🎙️ PodcastPro v2.0 - AI-Powered Podcast Creation Platform
 
-## Project Overview
-**Date Started**: July 14, 2025  
-**Current Date**: July 18, 2025  
-**Status**: Phase 4 Complete ✅ - MVP Testing & Debugging Phase  
-**Goal**: Create a scalable, user-friendly podcast automation platform  
+**Advanced podcast creation platform with AI voice generation, sophisticated audio processing, and professional template management.**
 
-## Current Status (July 18, 2025)
-🔥 **ACTIVE DEVELOPMENT** - End-to-end testing and debugging in progress  
-- ✅ **Server Running**: Flask API operational on port 5000
-- ✅ **Authentication**: User registration/login working (JWT)
-- ✅ **Podcast Management**: Create/read/update/delete operations working
-- ✅ **Episode Management**: Basic CRUD operations working
-- ⚡ **File Upload**: Currently debugging file upload issues
-- ⚡ **Episode Processing**: Background processing partially working
-- ✅ **Database**: SQLite with synchronized models (models_dev.py)
-- ✅ **Git Backup**: Repository backed up to github.com/tgdscott/pod2
-- 📊 **Test Results**: 3/7 real-world tests passing
+## ✨ New Features in v2.0
 
-## Recent Fixes & Progress
-- **Fixed**: Database session management in episode processing
-- **Fixed**: Podcast creation duplicate title handling
-- **Fixed**: Episode processing JSON content-type issue
-- **Fixed**: Model field synchronization (title vs name)
-- **Working**: Complete authentication flow
-- **Working**: Podcast and episode CRUD operations
-- **Working**: Protected endpoint authorization  
+### 🎯 **Advanced Template System**
+- **Sophisticated Audio Management**: Upload intro/outro music, transitions, and sound effects
+- **Precise Timing Controls**: Set exact start/end points and fade controls for each segment
+- **Visual Timeline Builder**: Drag-and-drop interface for arranging episode segments
+- **Professional Audio Mixing**: Multi-layer audio processing with volume control
 
-## Vision Statement
-Transform podcast creation from a technical barrier into an intuitive, automated process. Users upload raw audio, configure their show template once, and get professional podcast episodes with minimal effort.
+### 🤖 **ElevenLabs AI Integration**
+- **AI Voice Generation**: Create dynamic content with professional voice models
+- **Voice Cloning**: Clone custom voices from audio samples
+- **Dynamic Prompts**: Generate episode-specific content with template variables
+- **Voice Settings**: Fine-tune stability, similarity, and style parameters
 
-## Core Features (MVP)
-- **Single Job Type**: Podcast Creation (not Audio Processing/Transcription)
-- **Template System**: Flexible intro/outro/commercial/segment configuration
-- **Audio Processing**: Filler word removal, silence reduction, normalization
-- **Intelligence**: Keyword detection for commercial breaks and commands
-- **Automation**: Show notes generation, metadata creation, publishing
-- **Multi-tenant**: Built for thousands of users from day one
+### 🎵 **Advanced Audio Processing**
+- **Multi-Layer Mixing**: Mix voice segments with background music
+- **Precise Fade Controls**: Custom fade-in/fade-out for each segment
+- **Background Music Integration**: Music with custom start/end points and looping
+- **Professional Export**: High-quality MP3 output with metadata
 
-## Project Structure
+### 🎛️ **Professional Template Features**
+- **Music Track Configuration**: Background music with precise timing
+- **Segment Timing**: Start/end offsets for exact control
+- **Fade Controls**: Independent fade-in/fade-out for each segment
+- **Volume Mixing**: Optimal levels for voice and music layers
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.13+
+- FFmpeg (for audio processing)
+- ElevenLabs API key (for AI voice generation)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/podcastpro.git
+   cd podcastpro
+   ```
+
+2. **Create virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   # Create .env file
+   ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+   FLASK_SECRET_KEY=your_secret_key_here
+   ```
+
+5. **Initialize database**
+   ```bash
+   python recreate_database.py
+   ```
+
+6. **Run the application**
+   ```bash
+   python run.py
+   ```
+
+7. **Access the platform**
+   - Web Interface: http://localhost:5000
+   - API Documentation: http://localhost:5000/api/v1/health
+
+## 🎨 Template System Overview
+
+### Creating Advanced Templates
+
+1. **Navigate to Admin → Templates → New Template**
+2. **Upload Audio Files**: Add intro/outro music and sound effects
+3. **Build Timeline**: Arrange segments with drag-and-drop interface
+4. **Configure Music**: Set background music with precise timing
+5. **Add AI Segments**: Configure ElevenLabs voice and prompts
+6. **Save Template**: Ready for episode creation
+
+### Template Structure Example
+
+```json
+{
+  "version": "2.0",
+  "segments": [
+    {
+      "type": "intro",
+      "audio_file": "intro_1.mp3",
+      "timing": {
+        "start_offset": 0,
+        "end_offset": 0
+      },
+      "fade": {
+        "fade_in": 0,
+        "fade_out": 0
+      }
+    }
+  ],
+  "music_track": {
+    "type": "upload",
+    "file_path": "background_music.mp3",
+    "start_point": 3.0,
+    "fade_in": 2.0,
+    "fade_out": 3.0
+  },
+  "ai_segments": {
+    "voice_model": "21m00Tcm4TlvDq8ikWAM",
+    "stability": 0.5,
+    "prompts": [
+      "Welcome to [PODCAST_NAME], today we're discussing [TOPIC]..."
+    ]
+  }
+}
 ```
-D:\AAAPodcastPro\
-├── docs/                    # Complete documentation
-├── src/                     # Source code
-│   ├── api/                 # Flask API
-│   ├── core/                # Core processing engine
-│   ├── web/                 # Frontend
-│   └── database/            # Database models & migrations
-├── tests/                   # Test suite
-├── deployment/              # Docker & cloud deployment
-└── examples/                # Sample templates & workflows
+
+## 🤖 AI Voice Generation
+
+### ElevenLabs Integration
+
+PodcastPro integrates with ElevenLabs for professional AI voice generation:
+
+- **Voice Models**: Choose from professional voices (Rachel, Domi, Bella, Josh, etc.)
+- **Voice Cloning**: Clone custom voices from audio samples
+- **Dynamic Content**: Generate episode-specific content with template variables
+- **Voice Settings**: Adjust stability, similarity boost, and style
+
+### Example Usage
+
+```python
+from src.core.elevenlabs_service import ElevenLabsService
+
+# Initialize service
+elevenlabs = ElevenLabsService(api_key="your_api_key")
+
+# Generate episode segment
+audio_path = elevenlabs.generate_episode_segment(
+    prompt="Welcome to Tech Talk, today we're discussing AI...",
+    voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+    output_dir="outputs",
+    stability=0.5
+)
 ```
 
-## Quick Start
-1. Read `docs/ARCHITECTURE.md` for system design
-2. Read `docs/IMPLEMENTATION_PLAN.md` for build steps
-3. Follow `docs/SETUP.md` for development environment
+## 🎵 Advanced Audio Processing
 
-## Documentation Index
-- `docs/ARCHITECTURE.md` - Complete system architecture
-- `docs/API_SPEC.md` - All API endpoints and data models
-- `docs/DATABASE_SCHEMA.md` - Database design
-- `docs/IMPLEMENTATION_PLAN.md` - Step-by-step build guide
-- `docs/SETUP.md` - Development setup instructions
-- `docs/DEPLOYMENT.md` - Production deployment guide
+### Multi-Layer Audio Mixing
 
-## Development Status
-- [x] **Phase 1: Foundation** - Project setup, database, core API
-- [x] **Phase 2: Audio Processing** - Template system, audio pipeline
-- [x] **Phase 3: AI & Web Interface** - Complete web UI, AI integration
-  - [x] Project initialization and documentation
-  - [x] Database schema design (SQLite + PostgreSQL ready)
-  - [x] Core API framework (Flask + JWT + CORS)
-  - [x] Authentication system (JWT, registration, login, Google OAuth)
-  - [x] File upload/download system with validation
-  - [x] Podcasts CRUD operations
-  - [x] Episodes CRUD operations with processing
-  - [x] Jobs tracking and status system
-  - [x] Templates API with segment configuration
-  - [x] Audio processing pipeline integration
-  - [x] End-to-end API workflow (tested)
-  - [x] **Complete web interface** (responsive, modern UI)
-  - [x] **AI Integration** (keyword detection, show notes, transcription)
-  - [x] User settings and preferences management
-  - [x] Template editor with drag-and-drop segments
-  - [x] Real-time job status updates
-  - [x] Episode management with audio player
-- [x] **Phase 4: Production** - Background jobs, deployment, optimization
-  - [x] Background job queue (Celery/Redis)
-  - [x] Audio processing with real files testing
-  - [x] Production deployment (Docker, cloud)
-  - [x] Advanced AI features (Voice synthesis)
-  - [x] Performance optimization
-  - [x] Comprehensive testing suite
-  - [x] **Podcast Setup Wizard** - Guided onboarding experience
-  - [x] **Google OAuth Integration** - Easy authentication
+The platform supports sophisticated audio processing:
 
-## Context for Future LLMs
-This is a complete rebuild of a podcast automation tool. The original was Cinema IRL-specific; this version is generalized for any podcast format. All decisions and progress are documented in the `docs/` folder. The implementation plan is designed for rapid development while maintaining production quality.
+- **Precise Timing**: Sub-second accuracy for segment positioning
+- **Volume Control**: Independent volume levels for each layer
+- **Fade Effects**: Custom fade-in/fade-out for smooth transitions
+- **Background Music**: Automatic looping and fade controls
 
-**Key Principle**: Make podcast creation as easy as uploading a file and clicking "Process"
+### Audio Processing Pipeline
+
+1. **Upload Audio Files** → Duration detection, metadata extraction
+2. **Template Configuration** → Visual timeline builder
+3. **AI Generation** → ElevenLabs integration for dynamic content
+4. **Advanced Mixing** → Multi-layer audio with precise timing
+5. **Professional Export** → High-quality MP3 with metadata
+
+## 📁 Project Structure
+
+```
+podcastpro/
+├── src/
+│   ├── api/                    # REST API endpoints
+│   │   ├── auth.py            # Authentication
+│   │   ├── podcasts.py        # Podcast management
+│   │   ├── episodes.py        # Episode processing
+│   │   ├── templates.py       # Template management
+│   │   └── files.py           # File uploads
+│   ├── core/                  # Core processing
+│   │   ├── elevenlabs_service.py      # AI voice generation
+│   │   ├── advanced_audio_processor.py # Audio processing
+│   │   └── podcast_processor.py       # Episode processing
+│   ├── database/              # Database models
+│   │   ├── models.py          # Production models
+│   │   └── models_dev.py      # Development models
+│   └── web/                   # Web interface
+│       ├── templates/         # HTML templates
+│       └── static/            # CSS, JS, images
+├── uploads/                   # User uploaded files
+├── outputs/                   # Processed episodes
+├── docs/                      # Documentation
+└── tests/                     # Test files
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Required
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+FLASK_SECRET_KEY=your_secret_key
+
+# Optional
+FLASK_ENV=development
+DATABASE_URL=sqlite:///podcastpro_dev.db
+UPLOAD_FOLDER=uploads
+OUTPUT_FOLDER=outputs
+```
+
+### Audio Processing Settings
+
+```python
+# Audio file limits
+MAX_AUDIO_SIZE = 500 * 1024 * 1024  # 500MB
+ALLOWED_AUDIO_FORMATS = ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg']
+
+# Processing settings
+AUDIO_BITRATE = '192k'
+TARGET_DBFS = -20.0
+```
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run specific test file
+python -m pytest test_real_world.py
+
+# Run with coverage
+python -m pytest --cov=src
+```
+
+### Test Templates
+
+```bash
+# Test template creation
+python test_real_world.py
+
+# Test audio processing
+python test_audio_processing_real.py
+```
+
+## 📚 API Documentation
+
+### Authentication
+
+```bash
+# Register
+POST /api/v1/auth/register
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "username": "username"
+}
+
+# Login
+POST /api/v1/auth/login
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+### Templates
+
+```bash
+# Create template
+POST /api/v1/templates
+{
+  "name": "Professional Show",
+  "description": "Professional podcast template",
+  "content": {
+    "version": "2.0",
+    "segments": [...],
+    "music_track": {...},
+    "ai_segments": {...}
+  }
+}
+
+# Get templates
+GET /api/v1/templates
+
+# Get specific template
+GET /api/v1/templates/{template_id}
+```
+
+### Episodes
+
+```bash
+# Create episode
+POST /api/v1/episodes
+{
+  "podcast_id": "podcast_uuid",
+  "title": "Episode Title",
+  "template_id": "template_uuid",
+  "audio_files": [...]
+}
+
+# Process episode
+POST /api/v1/episodes/{episode_id}/process
+```
+
+## 🚀 Deployment
+
+### Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Or build manually
+docker build -t podcastpro .
+docker run -p 5000:5000 podcastpro
+```
+
+### Production Setup
+
+1. **Set production environment variables**
+2. **Configure database (PostgreSQL recommended)**
+3. **Set up reverse proxy (nginx)**
+4. **Configure SSL certificates**
+5. **Set up monitoring and logging**
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **ElevenLabs** for AI voice generation
+- **Librosa** for audio processing
+- **Pydub** for audio manipulation
+- **Flask** for the web framework
+
+## 📞 Support
+
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/podcastpro/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/podcastpro/discussions)
+
+---
+
+**PodcastPro v2.0** - Professional podcast creation made simple with AI! 🎙️✨
