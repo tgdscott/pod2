@@ -186,79 +186,7 @@
                         </div>
                     </div>
 
-                    <!-- AI Voice Generation (ElevenLabs) -->
-                    <div class="mb-4">
-                        <h5>AI Voice Generation (ElevenLabs)</h5>
-                        <div class="alert alert-info">
-                            <i class="fas fa-robot me-2"></i>
-                            <strong>How This Works:</strong> This section sets up AI voice generation for your podcast. When you create episodes, AI will automatically generate intro/outro voice content using your ElevenLabs API key. Perfect for consistent branding across episodes!
-                        </div>
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Note:</strong> You'll need to add your ElevenLabs API key in Settings first. This section is optional - you can skip it if you prefer to use only uploaded audio files.
-                        </div>
-                        
-                        <div id="aiSegments">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Voice Model</label>
-                                            <select class="form-select" id="voiceModel" onchange="toggleVoiceOptions()">
-                                                <option value="">Select voice model...</option>
-                                                <option value="custom">Use Custom Voice ID</option>
-                                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Professional)</option>
-                                                <option value="AZnzlk1XvdvUeBnXmlld">Domi (Casual)</option>
-                                                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Warm)</option>
-                                                <option value="21j0vfeTClDxlSDvGRl">Josh (Deep)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Custom Voice ID</label>
-                                            <input type="text" class="form-control" id="customVoiceId" placeholder="Enter your ElevenLabs Voice ID" style="display: none;">
-                                            <div class="form-text" id="voiceIdHelp" style="display: none;">Find your Voice ID in your ElevenLabs dashboard</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Voice Consistency</label>
-                                            <div class="input-group">
-                                                <input type="range" class="form-range" id="voiceStability" min="0" max="1" step="0.01" value="0.5">
-                                                <span class="input-group-text">
-                                                    <span id="stabilityLabel">Balanced</span>: <span id="stabilityValue">0.5</span>
-                                                </span>
-                                            </div>
-                                            <div class="form-text">
-                                                <strong>Low (0.0):</strong> More expressive, varies between generations<br>
-                                                <strong>High (1.0):</strong> More consistent, same voice every time
-                                            </div>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">Dynamic Content Prompts</label>
-                                            <div class="form-text mb-2">
-                                                <i class="fas fa-lightbulb me-1"></i>
-                                                <strong>Purpose:</strong> These are template prompts that will be used to generate dynamic content for each episode. 
-                                                Use placeholders like [PODCAST_NAME], [TOPIC], [GUEST_NAME] that will be filled in when creating episodes.
-                                                <br><strong>Example:</strong> "Welcome to [PODCAST_NAME], today we're discussing [TOPIC] with our special guest [GUEST_NAME]."
-                                            </div>
-                                            <div id="aiPrompts">
-                                                <div class="input-group mb-2">
-                                                    <input type="text" class="form-control" placeholder="e.g., Welcome to [PODCAST_NAME], today we're discussing [TOPIC]...">
-                                                    <button type="button" class="btn btn-outline-danger" onclick="removePrompt(this)">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPrompt()">
-                                                <i class="fas fa-plus me-1"></i>Add Prompt
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="skipAISection()">
-                                                <i class="fas fa-forward me-1"></i>Skip AI Section
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
 
 
 
@@ -308,9 +236,9 @@
                 
                 <h6>AI Integration:</h6>
                 <ul class="small">
-                    <li>Use AI for intro/outro voice generation</li>
-                    <li>AI segments use your ElevenLabs API key</li>
-                    <li>Perfect for consistent branding across episodes</li>
+                    <li>Add AI segments directly in the timeline</li>
+                    <li>Select "Generate with AI" for any segment</li>
+                    <li>Uses your ElevenLabs API key from Settings</li>
                 </ul>
             </div>
         </div>
@@ -569,19 +497,7 @@ function toggleMusicOptions() {
     }
 }
 
-function toggleVoiceOptions() {
-    const model = document.getElementById('voiceModel').value;
-    const customInput = document.getElementById('customVoiceId');
-    const helpText = document.getElementById('voiceIdHelp');
-    
-    if (model === 'custom') {
-        customInput.style.display = 'block';
-        helpText.style.display = 'block';
-    } else {
-        customInput.style.display = 'none';
-        helpText.style.display = 'none';
-    }
-}
+
 
 function addSegment(type) {
     console.log('Adding segment of type:', type);
@@ -930,40 +846,9 @@ function previewAISegment(segmentId) {
     alert(`AI preview functionality will be implemented when creating episodes.\n\nVoice: ${voiceSelect.options[voiceSelect.selectedIndex].textContent}\nPrompt: ${prompt}`);
 }
 
-function addPrompt() {
-    const promptsContainer = document.getElementById('aiPrompts');
-    const promptHtml = `
-        <div class="input-group mb-2">
-            <input type="text" class="form-control" placeholder="e.g., Welcome to [PODCAST_NAME], today we're discussing [TOPIC]...">
-            <button type="button" class="btn btn-outline-danger" onclick="removePrompt(this)">
-                <i class="fas fa-trash"></i>
-            </button>
-        </div>
-    `;
-    promptsContainer.insertAdjacentHTML('beforeend', promptHtml);
-}
 
-function removePrompt(button) {
-    button.closest('.input-group').remove();
-}
 
-function skipAISection() {
-    if (confirm('Skip AI Voice Generation? You can always configure this later in Settings.')) {
-        // Clear AI fields
-        document.getElementById('voiceModel').value = '';
-        document.getElementById('customVoiceId').value = '';
-        document.getElementById('voiceStability').value = '0.5';
-        document.getElementById('aiPrompts').innerHTML = `
-            <div class="input-group mb-2">
-                <input type="text" class="form-control" placeholder="e.g., Welcome to [PODCAST_NAME], today we're discussing [TOPIC]...">
-                <button type="button" class="btn btn-outline-danger" onclick="removePrompt(this)">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        alert('AI Voice Generation skipped. You can configure this later in Settings.');
-    }
-}
+
 
 function updateTemplatePreview() {
     const preview = document.getElementById('templatePreview');
@@ -1063,11 +948,7 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
                 fade_in: document.getElementById('musicFadeIn') ? parseFloat(document.getElementById('musicFadeIn').value) || 0 : 0,
                 fade_out: document.getElementById('musicFadeOut') ? parseFloat(document.getElementById('musicFadeOut').value) || 0 : 0
             },
-            voice: {
-                model: document.getElementById('voiceModel') ? document.getElementById('voiceModel').value : '',
-                custom_id: document.getElementById('customVoiceId') ? document.getElementById('customVoiceId').value : '',
-                stability: document.getElementById('voiceStability') ? parseFloat(document.getElementById('voiceStability').value) || 0.5 : 0.5
-            },
+
             segments: []
         }
     };
@@ -1097,14 +978,7 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
         formData.content.segments.push(segmentData);
     });
     
-    // Collect AI prompts
-    const prompts = [];
-    document.querySelectorAll('#aiPrompts input').forEach(input => {
-        if (input.value.trim()) {
-            prompts.push(input.value.trim());
-        }
-    });
-    formData.content.voice.prompts = prompts;
+
     
     console.log('Submitting template data:', formData);
     

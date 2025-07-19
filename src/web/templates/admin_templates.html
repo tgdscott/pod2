@@ -73,9 +73,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <small class="text-muted">
                         {% if template.created_at %}
-                        Created {{ template.created_at.strftime('%b %d, %Y') if template.created_at is string else template.created_at.strftime('%b %d, %Y') }}
+                            {% if template.created_at is string %}
+                                Created {{ template.created_at }}
+                            {% else %}
+                                Created {{ template.created_at.strftime('%b %d, %Y') }}
+                            {% endif %}
                         {% else %}
-                        No date
+                            No date
                         {% endif %}
                     </small>
                     <div class="btn-group btn-group-sm">
