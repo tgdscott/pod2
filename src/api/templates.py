@@ -26,16 +26,12 @@ def get_templates():
             # Get query parameters
             page = int(request.args.get('page', 1))
             per_page = min(int(request.args.get('per_page', 20)), 100)
-            template_type = request.args.get('type')
             
             # Calculate offset
             offset = (page - 1) * per_page
             
             # Build query
             query = db.query(Template).filter(Template.user_id == user_id)
-            
-            if template_type:
-                query = query.filter(Template.template_type == template_type)
             
             # Get templates with pagination
             templates = query.order_by(Template.created_at.desc())\
@@ -45,8 +41,6 @@ def get_templates():
             
             # Get total count
             total_query = db.query(Template).filter(Template.user_id == user_id)
-            if template_type:
-                total_query = total_query.filter(Template.template_type == template_type)
             total = total_query.count()
             
             return {
@@ -77,17 +71,13 @@ def create_template():
         
         # Validate required fields
         name = data.get('name', '').strip()
-        template_type = data.get('type', '').strip()
-        content = data.get('content', {})
+        structure = data.get('content', {})  # Frontend sends 'content', we store as 'structure'
         
         if not name:
             return {'error': 'Template name is required'}, 400
         
-        if not template_type:
-            return {'error': 'Template type is required'}, 400
-        
-        if not content:
-            return {'error': 'Template content is required'}, 400
+        if not structure:
+            return {'error': 'Template structure is required'}, 400
         
         db = get_db_session()
         try:
@@ -105,8 +95,7 @@ def create_template():
                 id=str(uuid.uuid4()),
                 user_id=user_id,
                 name=name,
-                template_type=template_type,
-                content=content,
+                structure=structure,
                 description=data.get('description', ''),
                 is_public=data.get('is_public', False),
                 created_at=datetime.now(timezone.utc),
@@ -185,8 +174,8 @@ def update_template(template_id):
             
             if 'content' in data:
                 if not data['content']:
-                    return {'error': 'Template content cannot be empty'}, 400
-                template.content = data['content']
+                    return {'error': 'Template structure cannot be empty'}, 400
+                template.structure = data['content']  # Frontend sends 'content', we store as 'structure'
             
             if 'description' in data:
                 template.description = data['description']

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}Podcast Management | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                <li class="breadcrumb-item active">Podcasts</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">Podcast Management</h2>
+        <p class="text-muted mb-0">Create and manage your podcast channels</p>
+    </div>
+    <a href="/admin/podcasts/new" class="btn btn-success btn-lg">
+        <i class="fas fa-plus me-2"></i>New Podcast
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search Podcasts</label>
+                <input type="text" class="form-control" id="search" placeholder="Search by name...">
+            </div>
+            <div class="col-md-3">
+                <label for="status-filter" class="form-label">Status</label>
+                <select class="form-select" id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Podcasts List -->
+{% if podcasts %}
+<div class="row g-4">
+    {% for podcast in podcasts %}
+    <div class="col-md-6 col-lg-4 podcast-card" 
+         data-name="{{ podcast.name.lower() }}" 
+         data-status="{{ podcast.status or 'active' }}">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ podcast.name }}</h5>
+                    <span class="badge bg-{{ 'success' if podcast.status == 'active' else 'secondary' }}">
+                        {{ podcast.status or 'active' }}
+                    </span>
+                </div>
+                
+                {% if podcast.description %}
+                <p class="card-text text-muted small mb-3">{{ podcast.description }}</p>
+                {% endif %}
+                
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="fw-bold text-primary">{{ podcast.episode_count or 0 }}</div>
+                        <div class="small text-muted">Episodes</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-success">{{ podcast.completed_episodes or 0 }}</div>
+                        <div class="small text-muted">Completed</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-warning">{{ podcast.processing_episodes or 0 }}</div>
+                        <div class="small text-muted">Processing</div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        {% if podcast.created_at %}
+                        Created {{ podcast.created_at.strftime('%b %d, %Y') if podcast.created_at is string else podcast.created_at.strftime('%b %d, %Y') }}
+                        {% else %}
+                        No date
+                        {% endif %}
+                    </small>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/admin/podcasts/{{ podcast.id }}" class="btn btn-outline-primary">Manage</a>
+                        <a href="/admin/podcasts/{{ podcast.id }}/edit" class="btn btn-outline-secondary">Edit</a>
+                        <button class="btn btn-outline-danger" onclick="deletePodcast({{ podcast.id }})">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <img src="https://img.icons8.com/color/96/000000/podcast.png" alt="No podcasts" class="mb-3">
+    <h4>No podcasts yet</h4>
+    <p class="text-muted mb-4">Create your first podcast to get started with PodcastPro</p>
+    <a href="/admin/podcasts/new" class="btn btn-success btn-lg">Create Your First Podcast</a>
+</div>
+{% endif %}
+
+<script>
+// Filter functionality
+document.getElementById('search').addEventListener('input', filterPodcasts);
+document.getElementById('status-filter').addEventListener('change', filterPodcasts);
+
+function filterPodcasts() {
+    var searchTerm = document.getElementById('search').value.toLowerCase();
+    var statusFilter = document.getElementById('status-filter').value;
+    
+    var cards = document.querySelectorAll('.podcast-card');
+    
+    cards.forEach(function(card) {
+        var name = card.dataset.name;
+        var status = card.dataset.status;
+        
+        var matchesSearch = name.indexOf(searchTerm) !== -1;
+        var matchesStatus = !statusFilter || status === statusFilter;
+        
+        if (matchesSearch && matchesStatus) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById('search').value = '';
+    document.getElementById('status-filter').value = '';
+    filterPodcasts();
+}
+
+function deletePodcast(podcastId) {
+    if (confirm('Are you sure you want to delete this podcast? This will also delete all associated episodes and cannot be undone.')) {
+        fetch('/api/v1/podcasts/' + podcastId, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to delete podcast');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to delete podcast');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -9,10 +9,9 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity, create_access_token, 
     create_refresh_token, get_jwt
 )
-import bcrypt
 
 from src.database import get_db_session
-from src.database.models import User
+from src.database.models_dev import User
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -51,16 +50,13 @@ def register():
                 else:
                     return {'error': 'Username already taken'}, 400
             
-            # Hash password
-            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            
-            # Create new user
+            # Hash password using User model method
             user = User(
                 email=email,
                 username=username,
-                password_hash=password_hash.decode('utf-8'),
                 created_at=datetime.now(timezone.utc)
             )
+            user.set_password(password)
             
             db.add(user)
             db.commit()
@@ -108,8 +104,8 @@ def login():
             if not user:
                 return {'error': 'Invalid email or password'}, 401
             
-            # Check password
-            if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+            # Check password using User model method
+            if not user.check_password(password):
                 return {'error': 'Invalid email or password'}, 401
             
             # Update last login

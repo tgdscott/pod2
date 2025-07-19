@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.database import get_db_session
-from src.database.models import Podcast, User
+from src.database.models_dev import Podcast, User
 
 podcasts_bp = Blueprint('podcasts', __name__)
 
@@ -67,10 +67,10 @@ def create_podcast():
         data = request.get_json()
         
         # Validate required fields
-        title = data.get('title', '').strip()
+        name = data.get('title', '').strip()  # API uses 'title' but model uses 'name'
         description = data.get('description', '').strip()
         
-        if not title:
+        if not name:
             return {'error': 'Title is required'}, 400
         
         if not description:
@@ -78,10 +78,10 @@ def create_podcast():
         
         db = get_db_session()
         try:
-            # Check if podcast with same title exists for user
+            # Check if podcast with same name exists for user
             existing_podcast = db.query(Podcast).filter(
                 Podcast.user_id == user_id,
-                Podcast.title == title
+                Podcast.name == name
             ).first()
             
             if existing_podcast:
@@ -91,7 +91,7 @@ def create_podcast():
             podcast = Podcast(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
-                title=title,
+                name=name,
                 description=description,
                 language=data.get('language', 'en'),
                 category=data.get('category', 'General'),
@@ -165,10 +165,10 @@ def update_podcast(podcast_id):
             
             # Update fields
             if 'title' in data:
-                title = data['title'].strip()
-                if not title:
+                name = data['title'].strip()
+                if not name:
                     return {'error': 'Title cannot be empty'}, 400
-                podcast.title = title
+                podcast.name = name
             
             if 'description' in data:
                 description = data['description'].strip()

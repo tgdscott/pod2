@@ -96,6 +96,7 @@ def test_database():
         # Test user creation
         user = User(
             email="test@example.com",
+            username="testuser",
             first_name="Test",
             last_name="User"
         )

@@ -13,7 +13,7 @@ psycopg2-binary==2.9.9
 SQLAlchemy==2.0.23
 
 # Background Jobs
-celery==5.3.4
+celery==5.3.6
 redis==5.0.1
 
 # Audio Processing

@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}New Episode | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Create New Episode</h2>
+        <p class="text-muted mb-0">Upload audio and create your next podcast episode</p>
+    </div>
+    <a href="/episodes" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Episodes
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="episodeForm" enctype="multipart/form-data">
+                    <!-- Episode Details -->
+                    <div class="mb-4">
+                        <h5>Episode Details</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="title" class="form-label">Episode Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="podcast_id" class="form-label">Podcast *</label>
+                                <select class="form-select" id="podcast_id" name="podcast_id" required>
+                                    <option value="">Select a podcast...</option>
+                                    {% for podcast in podcasts %}
+                                    <option value="{{ podcast.id }}" {% if request.args.get('podcast_id')|int == podcast.id %}selected{% endif %}>{{ podcast.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of this episode..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Upload -->
+                    <div class="mb-4">
+                        <h5>Audio File</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="audio_file" class="form-label">Upload Audio File *</label>
+                                <input type="file" class="form-control" id="audio_file" name="audio_file" accept="audio/*" required>
+                                <div class="form-text">Supported formats: MP3, WAV, M4A (Max 100MB)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Options -->
+                    <div class="mb-4">
+                        <h5>Processing Options</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="transcribe" name="transcribe" checked>
+                                    <label class="form-check-label" for="transcribe">
+                                        Generate transcript
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="apply_template" name="apply_template" checked>
+                                    <label class="form-check-label" for="apply_template">
+                                        Apply podcast template
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-play me-2"></i>Create Episode
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-lg" onclick="window.location.href='/episodes'">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Help Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use high-quality audio for best results</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Keep file size under 100MB</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Processing may take several minutes</li>
+                    <li><i class="fas fa-check text-success me-2"></i>You'll be notified when complete</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div class="card" id="processingStatus" style="display: none;">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cog fa-spin me-2"></i>Processing</h6>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+                <p class="small text-muted mb-0" id="processingMessage">Uploading file...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('episodeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const audioFile = document.getElementById('audio_file').files[0];
+    const title = document.getElementById('title').value;
+    const podcastId = document.getElementById('podcast_id').value;
+    const description = document.getElementById('description').value;
+    const transcribe = document.getElementById('transcribe').checked;
+    const applyTemplate = document.getElementById('apply_template').checked;
+    
+    if (!audioFile) {
+        alert('Please select an audio file');
+        return;
+    }
+    
+    if (!title || !podcastId) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Show processing status
+    document.getElementById('processingStatus').style.display = 'block';
+    document.querySelector('.progress-bar').style.width = '10%';
+    document.getElementById('processingMessage').textContent = 'Uploading file...';
+    
+    // First upload the file
+    const fileFormData = new FormData();
+    fileFormData.append('file', audioFile);
+    
+    fetch('/api/v1/files/upload', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        },
+        body: fileFormData
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('File upload failed');
+        }
+        return response.json();
+    })
+    .then(function(fileData) {
+        document.querySelector('.progress-bar').style.width = '50%';
+        document.getElementById('processingMessage').textContent = 'Creating episode...';
+        
+        // Then create the episode
+        const episodeData = {
+            title: title,
+            podcast_id: podcastId,
+            description: description,
+            audio_files: [fileData.file.id],
+            transcribe: transcribe,
+            apply_template: applyTemplate
+        };
+        
+        return fetch('/api/v1/episodes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            },
+            body: JSON.stringify(episodeData)
+        });
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Episode creation failed');
+        }
+        return response.json();
+    })
+    .then(function(episodeData) {
+        document.querySelector('.progress-bar').style.width = '100%';
+        document.getElementById('processingMessage').textContent = 'Episode created successfully!';
+        
+        setTimeout(function() {
+            window.location.href = '/episodes/' + episodeData.episode.id;
+        }, 1000);
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        document.getElementById('processingMessage').textContent = 'Error: ' + error.message;
+        document.querySelector('.progress-bar').classList.add('bg-danger');
+    });
+});
+
+// File size validation
+document.getElementById('audio_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (file.size > maxSize) {
+            alert('File size must be less than 100MB');
+            e.target.value = '';
+        }
+    }
+});
+</script>
+{% endblock %} 

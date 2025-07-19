@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Login | PodcastPro{% endblock %}
+{% block title %}Register | PodcastPro{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
@@ -7,34 +7,38 @@
             <div class="card-body p-4">
                 <div class="text-center mb-4">
                     <img src="https://img.icons8.com/color/48/000000/microphone.png" alt="Logo" class="mb-3">
-                    <h3>Welcome to PodcastPro</h3>
-                    <p class="text-muted">Sign in to your account</p>
+                    <h3>Create Account</h3>
+                    <p class="text-muted">Join PodcastPro today</p>
                 </div>
                 
                 {% if error %}
                 <div class="alert alert-danger">{{ error }}</div>
                 {% endif %}
                 
-                <form method="POST" action="/login">
+                <form method="POST" action="/register">
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email" required>
                     </div>
                     <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="form-text">At least 6 characters</div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                    <button type="submit" class="btn btn-primary w-100">Create Account</button>
                 </form>
                 
                 <hr class="my-4">
                 
                 <div class="text-center">
-                    <p class="mb-0">Don't have an account? <a href="/register" class="text-decoration-none">Sign up</a></p>
+                    <p class="mb-0">Already have an account? <a href="/login" class="text-decoration-none">Sign in</a></p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
+{% endblock %} 

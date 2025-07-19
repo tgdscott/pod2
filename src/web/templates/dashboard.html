@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard | PodcastPro{% endblock %}
+{% block content %}
+<div class="mb-4 p-4 bg-primary text-white rounded shadow-sm">
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+        <div>
+            <h2 class="fw-bold mb-2">Welcome to PodcastPro!</h2>
+            <p class="mb-3">Ready to create your next episode? Let's get started.</p>
+            <a href="/episodes/new" class="btn btn-light btn-lg me-2">Create New Episode</a>
+            <a href="/episodes" class="btn btn-outline-light btn-lg">Manage Episodes</a>
+        </div>
+        <img src="https://img.icons8.com/color/96/000000/rocket--v2.png" alt="Rocket" class="d-none d-md-block" style="height:96px;">
+    </div>
+</div>
+
+<div class="mb-4">
+    <h3 class="mb-3">Your Podcasts</h3>
+    <div class="row g-3">
+        <div class="col-6 col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <div><img src="https://img.icons8.com/color/48/000000/combo-chart.png"/></div>
+                <div class="fw-bold">Podcasts</div>
+                <div class="fs-4">{{ stats.podcasts if stats else 0 }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <div><img src="https://img.icons8.com/color/48/000000/musical-notes.png"/></div>
+                <div class="fw-bold">Episodes</div>
+                <div class="fs-4">{{ stats.episodes if stats else 0 }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <div><img src="https://img.icons8.com/color/48/000000/flash-on.png"/></div>
+                <div class="fw-bold">Processing</div>
+                <div class="fs-4">{{ stats.processing if stats else 0 }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <div><img src="https://img.icons8.com/color/48/000000/checkmark.png"/></div>
+                <div class="fw-bold">Completed</div>
+                <div class="fs-4">{{ stats.completed if stats else 0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h4>Quick Actions</h4>
+    <div class="row g-3">
+        <div class="col-6 col-md-4">
+            <div class="card quick-action-card text-center p-3 bg-success text-white" onclick="window.location.href='/episodes/new'">
+                <div class="fw-bold">New Episode</div>
+                <div>Create and process a new episode</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card quick-action-card text-center p-3 bg-primary text-white" onclick="window.location.href='/episodes'">
+                <div class="fw-bold">Manage Episodes</div>
+                <div>View and edit your episodes</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card quick-action-card text-center p-3 bg-secondary text-white" onclick="window.location.href='/admin'">
+                <div class="fw-bold">Admin</div>
+                <div>Podcast settings and templates</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold">Recent Episodes</div>
+                <a href="/episodes">View All</a>
+            </div>
+            {% if recent_episodes %}
+                {% for episode in recent_episodes %}
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-bold">{{ episode.title }}</div>
+                        <div class="text-muted small">{{ episode.podcast_name }}</div>
+                    </div>
+                    <span class="badge bg-{{ 'success' if episode.status == 'completed' else 'warning' if episode.status == 'processing' else 'secondary' }}">
+                        {{ episode.status }}
+                    </span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted">No episodes yet. <a href="/episodes/new">Create your first episode</a></div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold">Processing Status</div>
+                <a href="#" onclick="location.reload()" class="text-decoration-none">Refresh</a>
+            </div>
+            {% if processing_jobs %}
+                {% for job in processing_jobs %}
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-bold">{{ job.job_type }}</div>
+                        <div class="text-muted small">{{ job.current_step or 'Queued' }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small">{{ job.progress_percent }}%</div>
+                        <span class="badge bg-{{ 'warning' if job.status == 'processing' else 'info' }}">
+                            {{ job.status }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted">No active processing jobs.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

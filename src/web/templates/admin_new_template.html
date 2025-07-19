@@ -1,0 +1,826 @@
+{% extends 'base.html' %}
+{% block title %}New Template | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                <li class="breadcrumb-item"><a href="/admin/templates">Templates</a></li>
+                <li class="breadcrumb-item active">New Template</a></li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">Create New Template</h2>
+        <p class="text-muted mb-0">Design sophisticated episode structures with audio files and AI integration</p>
+    </div>
+    <a href="/admin/templates" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Templates
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="templateForm">
+                    <!-- Basic Information -->
+                    <div class="mb-4">
+                        <h5>Basic Information</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="name" class="form-label">Template Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                                <div class="form-text">A descriptive name for this template</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Describe what this template is for..."></textarea>
+                                <div class="form-text">Optional description of the template's purpose</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_public" name="is_public">
+                                    <label class="form-check-label" for="is_public">
+                                        Make template public
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Files Management -->
+                    <div class="mb-4">
+                        <h5>Audio Files</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">Upload Audio Segments</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAudioUploadModal()">
+                                        <i class="fas fa-upload me-1"></i>Upload Files
+                                    </button>
+                                </div>
+                                <div id="audioFilesList" class="border rounded p-3 bg-light">
+                                    <p class="text-muted mb-0">No audio files uploaded yet. Click "Upload Files" to add audio segments.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Structure -->
+                    <div class="mb-4">
+                        <h5>Episode Structure</h5>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Pro Tip:</strong> Use the timeline below to arrange your segments. Audio files will automatically determine their duration, and you can set precise fade controls for music tracks.
+                        </div>
+                        
+                        <div id="templateTimeline" class="border rounded p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Timeline</h6>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addSegment('intro')">
+                                        <i class="fas fa-play me-1"></i>Intro
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="addSegment('content')">
+                                        <i class="fas fa-microphone me-1"></i>Content
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="addSegment('outro')">
+                                        <i class="fas fa-stop me-1"></i>Outro
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="addSegment('transition')">
+                                        <i class="fas fa-music me-1"></i>Transition
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="segmentsTimeline">
+                                <!-- Segments will be added here dynamically -->
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <div class="timeline-ruler">
+                                    <div class="ruler-markers">
+                                        <span>0s</span>
+                                        <span>30s</span>
+                                        <span>1m</span>
+                                        <span>1m 30s</span>
+                                        <span>2m</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Music Track Controls -->
+                    <div class="mb-4">
+                        <h5>Music Track Configuration</h5>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-music me-2"></i>
+                            <strong>Music Integration:</strong> Configure how background music interacts with your segments.
+                        </div>
+                        
+                        <div id="musicTracks">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Background Music</label>
+                                            <select class="form-select" id="backgroundMusic">
+                                                <option value="">No background music</option>
+                                                <option value="upload">Upload music file</option>
+                                                <option value="elevenlabs">Generate with ElevenLabs</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Music Start Point</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="musicStart" placeholder="0" min="0" step="0.1">
+                                                <span class="input-group-text">seconds</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Fade In Duration</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="musicFadeIn" placeholder="2" min="0" step="0.1">
+                                                <span class="input-group-text">seconds</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Fade Out Duration</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="musicFadeOut" placeholder="3" min="0" step="0.1">
+                                                <span class="input-group-text">seconds</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ElevenLabs Integration -->
+                    <div class="mb-4">
+                        <h5>AI Voice Generation (ElevenLabs)</h5>
+                        <div class="alert alert-success">
+                            <i class="fas fa-robot me-2"></i>
+                            <strong>AI Integration:</strong> Configure dynamic voice segments that will be generated for each episode.
+                        </div>
+                        
+                        <div id="aiSegments">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Voice Model</label>
+                                            <select class="form-select" id="voiceModel">
+                                                <option value="">Select voice model...</option>
+                                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Professional)</option>
+                                                <option value="AZnzlk1XvdvUeBnXmlld">Domi (Casual)</option>
+                                                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Warm)</option>
+                                                <option value="21j0vfeTClDxlSDvGRl">Josh (Deep)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Voice Settings</label>
+                                            <div class="input-group">
+                                                <input type="range" class="form-range" id="voiceStability" min="0" max="1" step="0.01" value="0.5">
+                                                <span class="input-group-text">Stability: <span id="stabilityValue">0.5</span></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Dynamic Content Prompts</label>
+                                            <div id="aiPrompts">
+                                                <div class="input-group mb-2">
+                                                    <input type="text" class="form-control" placeholder="e.g., Welcome to [PODCAST_NAME], today we're discussing [TOPIC]...">
+                                                    <button type="button" class="btn btn-outline-danger" onclick="removePrompt(this)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPrompt()">
+                                                <i class="fas fa-plus me-1"></i>Add Prompt
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-save me-2"></i>Create Template
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-lg" onclick="window.location.href='/admin/templates'">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Help Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Template Guide</h6>
+            </div>
+            <div class="card-body">
+                <h6>Advanced Template Features:</h6>
+                <ul class="small">
+                    <li class="mb-2"><strong>Audio Files:</strong> Upload intro/outro music, transitions, and sound effects</li>
+                    <li class="mb-2"><strong>Precise Timing:</strong> Set exact start/end points and fade controls</li>
+                    <li class="mb-2"><strong>AI Integration:</strong> Generate dynamic content with ElevenLabs</li>
+                    <li class="mb-2"><strong>Music Tracks:</strong> Background music with custom fade points</li>
+                </ul>
+                
+                <h6>Segment Types:</h6>
+                <ul class="small">
+                    <li><strong>Intro:</strong> Opening segments with music</li>
+                    <li><strong>Content:</strong> Main episode content</li>
+                    <li><strong>Outro:</strong> Closing segments with music</li>
+                    <li><strong>Transition:</strong> Music or sound effects</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Quick Templates -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Templates</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadQuickTemplate('professional')">
+                        Professional Show
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadQuickTemplate('casual')">
+                        Casual Conversation
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadQuickTemplate('story')">
+                        Story Format
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Preview -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Template Preview</h6>
+            </div>
+            <div class="card-body">
+                <div id="templatePreview">
+                    <p class="text-muted small">Template preview will appear here as you build it.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audio Upload Modal -->
+<div class="modal fade" id="audioUploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Audio Files</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="audioFiles" class="form-label">Select Audio Files</label>
+                    <input type="file" class="form-control" id="audioFiles" multiple accept="audio/*">
+                    <div class="form-text">Supported formats: MP3, WAV, FLAC, M4A, AAC, OGG (Max 500MB per file)</div>
+                </div>
+                <div id="uploadProgress" class="d-none">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="uploadedFiles" class="border rounded p-3">
+                    <p class="text-muted mb-0">No files uploaded yet.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="processUploads()">Process Files</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-ruler {
+    position: relative;
+    height: 30px;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+.ruler-markers {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.segment-item {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: white;
+}
+
+.segment-header {
+    background: #f8f9fa;
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+}
+
+.segment-content {
+    padding: 15px;
+}
+
+.audio-file-item {
+    background: #e9ecef;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.audio-file-item .file-info {
+    flex: 1;
+}
+
+.audio-file-item .file-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.timing-controls {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.fade-controls {
+    border-left: 3px solid #007bff;
+    padding-left: 10px;
+    margin-top: 10px;
+}
+</style>
+
+<script>
+let segmentCounter = 0;
+let uploadedFiles = [];
+let currentTemplate = {
+    name: '',
+    description: '',
+    segments: [],
+    musicTrack: null,
+    aiSegments: []
+};
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateTemplatePreview();
+    
+    // Voice stability slider
+    document.getElementById('voiceStability').addEventListener('input', function() {
+        document.getElementById('stabilityValue').textContent = this.value;
+    });
+});
+
+function openAudioUploadModal() {
+    const modal = new bootstrap.Modal(document.getElementById('audioUploadModal'));
+    modal.show();
+}
+
+function addSegment(type) {
+    segmentCounter++;
+    const segmentsTimeline = document.getElementById('segmentsTimeline');
+    
+    const segmentHtml = `
+        <div class="segment-item" data-segment-id="${segmentCounter}">
+            <div class="segment-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">
+                        <i class="fas fa-${getSegmentIcon(type)} me-2"></i>
+                        ${type.charAt(0).toUpperCase() + type.slice(1)} Segment ${segmentCounter}
+                    </h6>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" onclick="moveSegment(${segmentCounter}, 'up')">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="moveSegment(${segmentCounter}, 'down')">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="removeSegment(${segmentCounter})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="segment-content">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Audio File</label>
+                        <select class="form-select segment-audio" onchange="updateSegmentDuration(${segmentCounter})">
+                            <option value="">No audio file</option>
+                            ${uploadedFiles.map(file => `<option value="${file.id}">${file.name} (${file.duration})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Duration</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control segment-duration" readonly>
+                            <span class="input-group-text">seconds</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control segment-description" placeholder="Brief description of this segment">
+                    </div>
+                </div>
+                
+                <div class="timing-controls">
+                    <h6 class="mb-2">Timing Controls</h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">Start Offset</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" placeholder="0" min="0" step="0.1">
+                                <span class="input-group-text">s</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">End Offset</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" placeholder="0" min="0" step="0.1">
+                                <span class="input-group-text">s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="fade-controls">
+                    <h6 class="mb-2">Fade Controls</h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">Fade In</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" placeholder="0" min="0" step="0.1">
+                                <span class="input-group-text">s</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Fade Out</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" placeholder="0" min="0" step="0.1">
+                                <span class="input-group-text">s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    segmentsTimeline.insertAdjacentHTML('beforeend', segmentHtml);
+    updateTemplatePreview();
+}
+
+function getSegmentIcon(type) {
+    const icons = {
+        'intro': 'play',
+        'content': 'microphone',
+        'outro': 'stop',
+        'transition': 'music'
+    };
+    return icons[type] || 'music';
+}
+
+function removeSegment(segmentId) {
+    const segment = document.querySelector(`[data-segment-id="${segmentId}"]`);
+    if (segment) {
+        segment.remove();
+        updateTemplatePreview();
+    }
+}
+
+function moveSegment(segmentId, direction) {
+    const segment = document.querySelector(`[data-segment-id="${segmentId}"]`);
+    const timeline = document.getElementById('segmentsTimeline');
+    
+    if (direction === 'up' && segment.previousElementSibling) {
+        timeline.insertBefore(segment, segment.previousElementSibling);
+    } else if (direction === 'down' && segment.nextElementSibling) {
+        timeline.insertBefore(segment.nextElementSibling, segment);
+    }
+    
+    updateTemplatePreview();
+}
+
+function updateSegmentDuration(segmentId) {
+    const segment = document.querySelector(`[data-segment-id="${segmentId}"]`);
+    const audioSelect = segment.querySelector('.segment-audio');
+    const durationInput = segment.querySelector('.segment-duration');
+    
+    if (audioSelect.value) {
+        const selectedFile = uploadedFiles.find(file => file.id === audioSelect.value);
+        if (selectedFile) {
+            durationInput.value = selectedFile.duration;
+        }
+    } else {
+        durationInput.value = '';
+    }
+}
+
+function addPrompt() {
+    const promptsContainer = document.getElementById('aiPrompts');
+    const promptHtml = `
+        <div class="input-group mb-2">
+            <input type="text" class="form-control" placeholder="e.g., Welcome to [PODCAST_NAME], today we're discussing [TOPIC]...">
+            <button type="button" class="btn btn-outline-danger" onclick="removePrompt(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    promptsContainer.insertAdjacentHTML('beforeend', promptHtml);
+}
+
+function removePrompt(button) {
+    button.closest('.input-group').remove();
+}
+
+function processUploads() {
+    const fileInput = document.getElementById('audioFiles');
+    const files = fileInput.files;
+    
+    if (files.length === 0) {
+        alert('Please select files to upload');
+        return;
+    }
+    
+    const progressBar = document.querySelector('#uploadProgress .progress-bar');
+    const progressDiv = document.getElementById('uploadProgress');
+    progressDiv.classList.remove('d-none');
+    
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = progress + '%';
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            // Simulate file processing
+            setTimeout(() => {
+                processUploadedFiles(files);
+                progressDiv.classList.add('d-none');
+                bootstrap.Modal.getInstance(document.getElementById('audioUploadModal')).hide();
+            }, 500);
+        }
+    }, 100);
+}
+
+function processUploadedFiles(files) {
+    const uploadedFilesDiv = document.getElementById('uploadedFiles');
+    uploadedFilesDiv.innerHTML = '';
+    
+    Array.from(files).forEach((file, index) => {
+        const fileId = 'file_' + Date.now() + '_' + index;
+        const duration = Math.floor(Math.random() * 60) + 10; // Simulate duration
+        
+        const fileData = {
+            id: fileId,
+            name: file.name,
+            size: file.size,
+            duration: duration,
+            type: file.type
+        };
+        
+        uploadedFiles.push(fileData);
+        
+        const fileHtml = `
+            <div class="audio-file-item">
+                <div class="file-info">
+                    <div class="fw-bold">${file.name}</div>
+                    <div class="small text-muted">${formatFileSize(file.size)} • ${duration}s</div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn btn-sm btn-outline-primary" onclick="previewAudio('${fileId}')">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeAudioFile('${fileId}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        uploadedFilesDiv.insertAdjacentHTML('beforeend', fileHtml);
+    });
+    
+    updateAudioFileList();
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function updateAudioFileList() {
+    const audioFilesList = document.getElementById('audioFilesList');
+    
+    if (uploadedFiles.length === 0) {
+        audioFilesList.innerHTML = '<p class="text-muted mb-0">No audio files uploaded yet. Click "Upload Files" to add audio segments.</p>';
+    } else {
+        audioFilesList.innerHTML = uploadedFiles.map(file => `
+            <div class="audio-file-item">
+                <div class="file-info">
+                    <div class="fw-bold">${file.name}</div>
+                    <div class="small text-muted">${formatFileSize(file.size)} • ${file.duration}s</div>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function loadQuickTemplate(type) {
+    // Clear existing segments
+    document.getElementById('segmentsTimeline').innerHTML = '';
+    segmentCounter = 0;
+    
+    if (type === 'professional') {
+        addSegment('intro');
+        addSegment('content');
+        addSegment('outro');
+        
+        // Set some default values
+        setTimeout(() => {
+            const segments = document.querySelectorAll('.segment-item');
+            if (segments.length >= 3) {
+                const introDesc = segments[0].querySelector('.segment-description');
+                const contentDesc = segments[1].querySelector('.segment-description');
+                const outroDesc = segments[2].querySelector('.segment-description');
+                
+                if (introDesc) introDesc.value = 'Professional introduction with music';
+                if (contentDesc) contentDesc.value = 'Main episode content';
+                if (outroDesc) outroDesc.value = 'Professional closing with call-to-action';
+            }
+        }, 100);
+    }
+    
+    updateTemplatePreview();
+}
+
+function updateTemplatePreview() {
+    const preview = document.getElementById('templatePreview');
+    const name = document.getElementById('name').value;
+    const description = document.getElementById('description').value;
+    const segments = document.querySelectorAll('.segment-item');
+    
+    let previewHtml = '';
+    
+    if (name) {
+        previewHtml += `<h6>${name}</h6>`;
+    }
+    
+    if (description) {
+        previewHtml += `<p class="small text-muted">${description}</p>`;
+    }
+    
+    if (segments.length > 0) {
+        previewHtml += `<div class="mt-2"><strong>Structure:</strong></div>`;
+        segments.forEach((segment, index) => {
+            const type = segment.querySelector('h6').textContent.split(' ')[0];
+            const desc = segment.querySelector('.segment-description').value;
+            const duration = segment.querySelector('.segment-duration').value;
+            
+            previewHtml += `
+                <div class="small">
+                    ${index + 1}. ${type} ${duration ? `(${duration}s)` : ''}
+                    ${desc ? `<br><span class="text-muted">${desc}</span>` : ''}
+                </div>
+            `;
+        });
+    } else {
+        previewHtml += `<p class="text-muted small">No segments added yet.</p>`;
+    }
+    
+    preview.innerHTML = previewHtml;
+}
+
+// Update preview when form changes
+document.getElementById('name').addEventListener('input', updateTemplatePreview);
+document.getElementById('description').addEventListener('input', updateTemplatePreview);
+
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect segments data
+    const segments = [];
+    document.querySelectorAll('.segment-item').forEach(function(segment) {
+        const audioSelect = segment.querySelector('.segment-audio');
+        const durationInput = segment.querySelector('.segment-duration');
+        const descriptionInput = segment.querySelector('.segment-description');
+        
+        segments.push({
+            type: segment.querySelector('h6').textContent.split(' ')[0].toLowerCase(),
+            audio_file: audioSelect.value,
+            duration: durationInput.value,
+            description: descriptionInput.value,
+            timing: {
+                start_offset: segment.querySelector('input[placeholder="0"]').value || 0,
+                end_offset: segment.querySelectorAll('input[placeholder="0"]')[1]?.value || 0
+            },
+            fade: {
+                fade_in: segment.querySelectorAll('input[placeholder="0"]')[2]?.value || 0,
+                fade_out: segment.querySelectorAll('input[placeholder="0"]')[3]?.value || 0
+            }
+        });
+    });
+    
+    // Collect music track data
+    const musicTrack = {
+        type: document.getElementById('backgroundMusic').value,
+        start_point: document.getElementById('musicStart').value || 0,
+        fade_in: document.getElementById('musicFadeIn').value || 2,
+        fade_out: document.getElementById('musicFadeOut').value || 3
+    };
+    
+    // Collect AI segments data
+    const aiPrompts = [];
+    document.querySelectorAll('#aiPrompts input').forEach(input => {
+        if (input.value.trim()) {
+            aiPrompts.push(input.value.trim());
+        }
+    });
+    
+    const aiSegments = {
+        voice_model: document.getElementById('voiceModel').value,
+        stability: document.getElementById('voiceStability').value,
+        prompts: aiPrompts
+    };
+    
+    var formData = {
+        name: document.getElementById('name').value,
+        description: document.getElementById('description').value,
+        is_public: document.getElementById('is_public').checked,
+        content: {
+            version: "2.0",
+            segments: segments,
+            music_track: musicTrack,
+            ai_segments: aiSegments
+        }
+    };
+    
+    if (!formData.name) {
+        alert('Please enter a template name');
+        return;
+    }
+    
+    if (segments.length === 0) {
+        alert('Please add at least one segment to the template');
+        return;
+    }
+    
+    console.log('Template data:', formData);
+    
+    fetch('/api/v1/templates', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Failed to create template');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        alert('Template created successfully!');
+        window.location.href = '/admin/templates/' + data.template.id;
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        alert('Failed to create template: ' + error.message);
+    });
+});
+</script>
+{% endblock %} 

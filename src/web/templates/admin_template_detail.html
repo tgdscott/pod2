@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}{{ template.name }} | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                <li class="breadcrumb-item"><a href="/admin/templates">Templates</a></li>
+                <li class="breadcrumb-item active">{{ template.name }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">{{ template.name }}</h2>
+        <p class="text-muted mb-0">{{ template.description or 'No description' }}</p>
+    </div>
+    <div class="btn-group">
+        <a href="/admin/templates/{{ template.id }}/edit" class="btn btn-outline-primary">
+            <i class="fas fa-edit me-2"></i>Edit
+        </a>
+        <button class="btn btn-success" onclick="duplicateTemplate()">
+            <i class="fas fa-copy me-2"></i>Duplicate
+        </button>
+        <button class="btn btn-outline-danger" onclick="deleteTemplate()">
+            <i class="fas fa-trash me-2"></i>Delete
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Template Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Template Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Type</label>
+                        <div>
+                            <span class="badge bg-primary fs-6">
+                                Episode Template
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Status</label>
+                        <div>
+                            <span class="badge bg-{{ 'success' if template.is_public else 'secondary' }} fs-6">
+                                {{ 'Public' if template.is_public else 'Private' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Usage Count</label>
+                        <div>{{ template.usage_count or 0 }} episodes</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Created</label>
+                        <div>
+                            {% if template.created_at %}
+                            {{ template.created_at.strftime('%b %d, %Y') if template.created_at is string else template.created_at.strftime('%b %d, %Y') }}
+                            {% else %}
+                            Unknown
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Description</label>
+                        <div>{{ template.description or 'No description provided' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Structure -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Template Structure</h5>
+            </div>
+            <div class="card-body">
+                {% if template.structure and template.structure.segments %}
+                    <div class="timeline">
+                        {% for segment in template.structure.segments %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-{{ 'primary' if segment.type == 'intro' else 'success' if segment.type == 'content' else 'warning' if segment.type == 'outro' else 'info' }}">
+                                <i class="fas fa-{{ 'play' if segment.type == 'intro' else 'microphone' if segment.type == 'content' else 'stop' if segment.type == 'outro' else 'music' }}"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ segment.type|title }}</h6>
+                                        <p class="text-muted mb-1">{{ segment.description or 'No description' }}</p>
+                                        {% if segment.duration %}
+                                        <small class="text-muted">Duration: {{ segment.duration }}</small>
+                                        {% endif %}
+                                    </div>
+                                    {% if segment.audio_file %}
+                                    <span class="badge bg-secondary">{{ segment.audio_file }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-3">No segments defined in this template</p>
+                        <a href="/admin/templates/{{ template.id }}/edit" class="btn btn-primary">Add Segments</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Usage -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Usage</h5>
+            </div>
+            <div class="card-body">
+                {% if template.usage_count and template.usage_count > 0 %}
+                    <p class="text-muted">This template has been used {{ template.usage_count }} times.</p>
+                    <!-- TODO: Add recent episodes that used this template -->
+                    <div class="text-center py-3">
+                        <a href="/episodes?template_id={{ template.id }}" class="btn btn-outline-primary">View Episodes Using This Template</a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-3">This template hasn't been used yet</p>
+                        <a href="/episodes/new?template_id={{ template.id }}" class="btn btn-success">Create Episode with This Template</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary fs-4">{{ template.usage_count or 0 }}</div>
+                        <div class="small text-muted">Total Uses</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-success fs-4">{{ template.structure.segments|length if template.structure and template.structure.segments else 0 }}</div>
+                        <div class="small text-muted">Segments</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-info fs-4">Episode</div>
+                        <div class="small text-muted">Type</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-{{ 'success' if template.is_public else 'secondary' }} fs-4">{{ 'Yes' if template.is_public else 'No' }}</div>
+                        <div class="small text-muted">Public</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/templates/{{ template.id }}/edit" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Template
+                    </a>
+                    <a href="/episodes/new?template_id={{ template.id }}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Create Episode
+                    </a>
+                    <button class="btn btn-outline-warning" onclick="duplicateTemplate()">
+                        <i class="fas fa-copy me-2"></i>Duplicate Template
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteTemplate()">
+                        <i class="fas fa-trash me-2"></i>Delete Template
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export/Import -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Export/Import</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-secondary" onclick="exportTemplate()">
+                        <i class="fas fa-download me-2"></i>Export Template
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="importTemplate()">
+                        <i class="fas fa-upload me-2"></i>Import Template
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #dee2e6;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 30px;
+    bottom: -20px;
+    width: 2px;
+    background: #dee2e6;
+}
+</style>
+
+<script>
+function duplicateTemplate() {
+    if (confirm('Are you sure you want to duplicate this template? This will create a copy with all settings.')) {
+        // TODO: Implement template duplication
+        alert('Template duplication coming soon!');
+    }
+}
+
+function deleteTemplate() {
+    if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+        fetch('/api/v1/templates/{{ template.id }}', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                window.location.href = '/admin/templates';
+            } else {
+                alert('Failed to delete template');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to delete template');
+        });
+    }
+}
+
+function exportTemplate() {
+    // TODO: Implement template export
+    alert('Template export coming soon!');
+}
+
+function importTemplate() {
+    // TODO: Implement template import
+    alert('Template import coming soon!');
+}
+</script>
+{% endblock %} 

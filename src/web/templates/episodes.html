@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Episodes | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Episodes</h2>
+        <p class="text-muted mb-0">Manage and create your podcast episodes</p>
+    </div>
+    <a href="/episodes/new" class="btn btn-success btn-lg">
+        <i class="fas fa-plus me-2"></i>New Episode
+    </a>
+</div>
+
+<!-- Filters and Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Episodes</label>
+                <input type="text" class="form-control" id="search" placeholder="Search by title...">
+            </div>
+            <div class="col-md-3">
+                <label for="status-filter" class="form-label">Status</label>
+                <select class="form-select" id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="processing">Processing</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="podcast-filter" class="form-label">Podcast</label>
+                <select class="form-select" id="podcast-filter">
+                    <option value="">All Podcasts</option>
+                    {% for podcast in podcasts %}
+                    <option value="{{ podcast.id }}">{{ podcast.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Episodes List -->
+{% if episodes %}
+<div class="row g-4">
+    {% for episode in episodes %}
+    <div class="col-md-6 col-lg-4 episode-card" 
+         data-title="{{ episode.title.lower() }}" 
+         data-status="{{ episode.status }}" 
+         data-podcast="{{ episode.podcast_id }}">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ episode.title }}</h5>
+                    <span class="badge bg-{{ 'success' if episode.status == 'completed' else 'warning' if episode.status == 'processing' else 'danger' if episode.status == 'failed' else 'secondary' }}">
+                        {{ episode.status }}
+                    </span>
+                </div>
+                <p class="text-muted small mb-2">{{ episode.podcast_name }}</p>
+                <p class="card-text text-truncate">{{ episode.description or 'No description' }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        {% if episode.created_at %}
+                        {{ episode.created_at.strftime('%b %d, %Y') if episode.created_at is string else episode.created_at.strftime('%b %d, %Y') }}
+                        {% else %}
+                        No date
+                        {% endif %}
+                    </small>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/episodes/{{ episode.id }}" class="btn btn-outline-primary">View</a>
+                        {% if episode.status == 'completed' %}
+                        <a href="/episodes/{{ episode.id }}/download" class="btn btn-outline-success">Download</a>
+                        {% endif %}
+                        <button class="btn btn-outline-danger" onclick="deleteEpisode({{ episode.id }})">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination %}
+<nav aria-label="Episode pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.prev_num }}">Previous</a>
+        </li>
+        {% endif %}
+        
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != pagination.page %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_num }}</span>
+                </li>
+                {% endif %}
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.next_num }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <img src="https://img.icons8.com/color/96/000000/musical-notes.png" alt="No episodes" class="mb-3">
+    <h4>No episodes yet</h4>
+    <p class="text-muted mb-4">Create your first episode to get started with PodcastPro</p>
+    <a href="/episodes/new" class="btn btn-success btn-lg">Create Your First Episode</a>
+</div>
+{% endif %}
+
+<script>
+// Filter functionality
+document.getElementById('search').addEventListener('input', filterEpisodes);
+document.getElementById('status-filter').addEventListener('change', filterEpisodes);
+document.getElementById('podcast-filter').addEventListener('change', filterEpisodes);
+
+function filterEpisodes() {
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+    const podcastFilter = document.getElementById('podcast-filter').value;
+    
+    const cards = document.querySelectorAll('.episode-card');
+    
+    cards.forEach(function(card) {
+        var title = card.dataset.title;
+        var status = card.dataset.status;
+        var podcast = card.dataset.podcast;
+        
+        var matchesSearch = title.indexOf(searchTerm) !== -1;
+        var matchesStatus = !statusFilter || status === statusFilter;
+        var matchesPodcast = !podcastFilter || podcast === podcastFilter;
+        
+        if (matchesSearch && matchesStatus && matchesPodcast) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById('search').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('podcast-filter').value = '';
+    filterEpisodes();
+}
+
+function deleteEpisode(episodeId) {
+    if (confirm('Are you sure you want to delete this episode? This action cannot be undone.')) {
+        fetch(`/api/v1/episodes/${episodeId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to delete episode');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to delete episode');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% block title %}{{ podcast.name }} | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                <li class="breadcrumb-item"><a href="/admin/podcasts">Podcasts</a></li>
+                <li class="breadcrumb-item active">{{ podcast.name }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">{{ podcast.name }}</h2>
+        <p class="text-muted mb-0">{{ podcast.description or 'No description' }}</p>
+    </div>
+    <div class="btn-group">
+        <a href="/admin/podcasts/{{ podcast.id }}/edit" class="btn btn-outline-primary">
+            <i class="fas fa-edit me-2"></i>Edit
+        </a>
+        <a href="/episodes/new?podcast_id={{ podcast.id }}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>New Episode
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Podcast Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Podcast Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Status</label>
+                        <div>
+                            <span class="badge bg-{{ 'success' if podcast.status == 'active' else 'secondary' }} fs-6">
+                                {{ podcast.status or 'active' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Category</label>
+                        <div>{{ podcast.category or 'Not specified' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Language</label>
+                        <div>{{ podcast.language or 'English' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Author</label>
+                        <div>{{ podcast.author or 'Not specified' }}</div>
+                    </div>
+                    {% if podcast.email %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Contact Email</label>
+                        <div><a href="mailto:{{ podcast.email }}">{{ podcast.email }}</a></div>
+                    </div>
+                    {% endif %}
+                    {% if podcast.website %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Website</label>
+                        <div><a href="{{ podcast.website }}" target="_blank">{{ podcast.website }}</a></div>
+                    </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Description</label>
+                        <div>{{ podcast.description or 'No description provided' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Episodes -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Episodes</h5>
+                <a href="/episodes?podcast_id={{ podcast.id }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if podcast.episodes %}
+                    {% for episode in podcast.episodes[:5] %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="fw-bold">{{ episode.title }}</div>
+                            <div class="text-muted small">
+                                {% if episode.created_at %}
+                                {{ episode.created_at.strftime('%b %d, %Y') if episode.created_at is string else episode.created_at.strftime('%b %d, %Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-{{ 'success' if episode.status == 'completed' else 'warning' if episode.status == 'processing' else 'secondary' }}">
+                                {{ episode.status }}
+                            </span>
+                            <a href="/episodes/{{ episode.id }}" class="btn btn-sm btn-outline-primary">View</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if podcast.episodes|length > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="/episodes?podcast_id={{ podcast.id }}" class="btn btn-outline-secondary">View All {{ podcast.episodes|length }} Episodes</a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-3">No episodes yet for this podcast</p>
+                        <a href="/episodes/new?podcast_id={{ podcast.id }}" class="btn btn-success">Create First Episode</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary fs-4">{{ podcast.episode_count or 0 }}</div>
+                        <div class="small text-muted">Total Episodes</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-success fs-4">{{ podcast.completed_episodes or 0 }}</div>
+                        <div class="small text-muted">Completed</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-warning fs-4">{{ podcast.processing_episodes or 0 }}</div>
+                        <div class="small text-muted">Processing</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-info fs-4">{{ podcast.total_duration or '0:00' }}</div>
+                        <div class="small text-muted">Total Duration</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Files -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Audio Files</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 mb-3">
+                    <a href="/admin/audio-files/upload?podcast_id={{ podcast.id }}" class="btn btn-success">
+                        <i class="fas fa-upload me-2"></i>Upload Audio File
+                    </a>
+                    <a href="/admin/audio-files?podcast_id={{ podcast.id }}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>Manage Files
+                    </a>
+                </div>
+                
+                {% if podcast.audio_files %}
+                    <h6 class="mb-2">Recent Files</h6>
+                    {% for file in podcast.audio_files[:3] %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="small fw-bold">{{ file.original_filename }}</div>
+                            <div class="small text-muted">{{ file.file_type }}</div>
+                        </div>
+                        <a href="/admin/audio-files/{{ file.id }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small mb-0">No audio files uploaded yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Templates -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Episode Templates</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 mb-3">
+                    <a href="/admin/templates/new?podcast_id={{ podcast.id }}" class="btn btn-info">
+                        <i class="fas fa-plus me-2"></i>Create Template
+                    </a>
+                    <a href="/admin/templates?podcast_id={{ podcast.id }}" class="btn btn-outline-info">
+                        <i class="fas fa-list me-2"></i>Manage Templates
+                    </a>
+                </div>
+                
+                {% if podcast.templates %}
+                    <h6 class="mb-2">Available Templates</h6>
+                    {% for template in podcast.templates[:3] %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="small fw-bold">{{ template.name }}</div>
+                            <div class="small text-muted">{{ template.segments|length }} segments</div>
+                        </div>
+                        <a href="/admin/templates/{{ template.id }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small mb-0">No templates created yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/podcasts/{{ podcast.id }}/edit" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Podcast
+                    </a>
+                    <a href="/episodes/new?podcast_id={{ podcast.id }}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Create Episode
+                    </a>
+                    <button class="btn btn-outline-warning" onclick="duplicatePodcast()">
+                        <i class="fas fa-copy me-2"></i>Duplicate
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deletePodcast()">
+                        <i class="fas fa-trash me-2"></i>Delete Podcast
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function duplicatePodcast() {
+    if (confirm('Are you sure you want to duplicate this podcast? This will create a copy with all settings.')) {
+        // TODO: Implement podcast duplication
+        alert('Podcast duplication coming soon!');
+    }
+}
+
+function deletePodcast() {
+    if (confirm('Are you sure you want to delete this podcast? This will also delete all associated episodes and cannot be undone.')) {
+        fetch('/api/v1/podcasts/{{ podcast.id }}', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                window.location.href = '/admin/podcasts';
+            } else {
+                alert('Failed to delete podcast');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to delete podcast');
+        });
+    }
+}
+</script>
+{% endblock %} 

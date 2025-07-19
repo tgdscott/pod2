@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block title %}{{ episode.title }} | PodcastPro{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/episodes">Episodes</a></li>
+                <li class="breadcrumb-item active">{{ episode.title }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">{{ episode.title }}</h2>
+        <p class="text-muted mb-0">{{ episode.podcast_name }}</p>
+    </div>
+    <div class="btn-group">
+        {% if episode.status == 'completed' %}
+        <a href="/episodes/{{ episode.id }}/download" class="btn btn-success">
+            <i class="fas fa-download me-2"></i>Download
+        </a>
+        {% endif %}
+        <button class="btn btn-outline-primary" onclick="editEpisode()">
+            <i class="fas fa-edit me-2"></i>Edit
+        </button>
+        <button class="btn btn-outline-danger" onclick="deleteEpisode()">
+            <i class="fas fa-trash me-2"></i>Delete
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Episode Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Episode Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Status</label>
+                        <div>
+                            <span class="badge bg-{{ 'success' if episode.status == 'completed' else 'warning' if episode.status == 'processing' else 'danger' if episode.status == 'failed' else 'secondary' }} fs-6">
+                                {{ episode.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Created</label>
+                        <div>
+                            {% if episode.created_at %}
+                            {{ episode.created_at.strftime('%B %d, %Y at %I:%M %p') if episode.created_at is string else episode.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                            {% else %}
+                            Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Description</label>
+                        <div>
+                            {{ episode.description or 'No description provided' }}
+                        </div>
+                    </div>
+                    {% if episode.duration %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Duration</label>
+                        <div>{{ episode.duration }}</div>
+                    </div>
+                    {% endif %}
+                    {% if episode.file_size %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">File Size</label>
+                        <div>{{ episode.file_size }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        {% if episode.status == 'processing' %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog fa-spin me-2"></i>Processing Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ episode.progress_percent or 0 }}%">
+                        {{ episode.progress_percent or 0 }}%
+                    </div>
+                </div>
+                <p class="text-muted mb-0">{{ episode.current_step or 'Processing...' }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Transcript -->
+        {% if episode.transcript %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Transcript</h5>
+            </div>
+            <div class="card-body">
+                <div class="transcript-content" style="max-height: 400px; overflow-y: auto;">
+                    {{ episode.transcript | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Audio Player -->
+        {% if episode.audio_url %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Audio Preview</h5>
+            </div>
+            <div class="card-body">
+                <audio controls class="w-100">
+                    <source src="{{ episode.audio_url }}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Processing History -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Processing History</h6>
+            </div>
+            <div class="card-body">
+                {% if episode.processing_history %}
+                    {% for step in episode.processing_history %}
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-{{ 'check text-success' if step.completed else 'clock text-warning' }} me-2"></i>
+                        <div>
+                            <div class="small fw-bold">{{ step.name }}</div>
+                            {% if step.completed %}
+                            <div class="small text-muted">{{ step.completed_at }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small mb-0">No processing history available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Episode Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if episode.status == 'completed' %}
+                    <a href="/episodes/{{ episode.id }}/download" class="btn btn-success">
+                        <i class="fas fa-download me-2"></i>Download Episode
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-outline-primary" onclick="editEpisode()">
+                        <i class="fas fa-edit me-2"></i>Edit Episode
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="reprocessEpisode()">
+                        <i class="fas fa-redo me-2"></i>Reprocess
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteEpisode()">
+                        <i class="fas fa-trash me-2"></i>Delete Episode
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Episode Metadata -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Metadata</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Episode ID</dt>
+                    <dd class="col-sm-6">{{ episode.id }}</dd>
+                    
+                    <dt class="col-sm-6">Podcast ID</dt>
+                    <dd class="col-sm-6">{{ episode.podcast_id }}</dd>
+                    
+                    {% if episode.template_id %}
+                    <dt class="col-sm-6">Template</dt>
+                    <dd class="col-sm-6">{{ episode.template_id }}</dd>
+                    {% endif %}
+                    
+                    {% if episode.updated_at %}
+                    <dt class="col-sm-6">Last Updated</dt>
+                    <dd class="col-sm-6">{{ episode.updated_at.strftime('%B %d, %Y') if episode.updated_at is string else episode.updated_at.strftime('%B %d, %Y') }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editEpisode() {
+    // TODO: Implement edit functionality
+    alert('Edit functionality coming soon!');
+}
+
+function deleteEpisode() {
+    if (confirm('Are you sure you want to delete this episode? This action cannot be undone.')) {
+        fetch('/api/v1/episodes/{{ episode.id }}', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                window.location.href = '/episodes';
+            } else {
+                alert('Failed to delete episode');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to delete episode');
+        });
+    }
+}
+
+function reprocessEpisode() {
+    if (confirm('Are you sure you want to reprocess this episode? This will start the processing from the beginning.')) {
+        fetch('/api/v1/episodes/{{ episode.id }}/reprocess', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to start reprocessing');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to start reprocessing');
+        });
+    }
+}
+
+// Auto-refresh if processing
+{% if episode.status == 'processing' %}
+setInterval(function() {
+    location.reload();
+}, 5000); // Refresh every 5 seconds
+{% endif %}
+</script>
+{% endblock %}

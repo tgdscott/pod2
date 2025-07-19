@@ -36,6 +36,7 @@ class User(Base, TimestampMixin):
     
     id = Column(UUID, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
@@ -133,6 +134,7 @@ class Podcast(Base, TimestampMixin):
         """Convert to dictionary for API responses"""
         return {
             'id': str(self.id),
+            'title': self.name,  # API expects 'title' but model uses 'name'
             'name': self.name,
             'description': self.description,
             'author': self.author,
@@ -144,9 +146,9 @@ class Podcast(Base, TimestampMixin):
             'cover_art_url': self.cover_art_url,
             'website_url': self.website_url,
             'rss_url': self.rss_url,
-            'episode_count': len(self.episodes),
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'episode_count': len(self.episodes) if self.episodes else 0,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 
