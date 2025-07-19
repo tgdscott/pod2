@@ -39,7 +39,7 @@ def create_app(config_name: str = 'development') -> Flask:
         
         'UPLOAD_FOLDER': os.getenv('UPLOAD_FOLDER', 'uploads'),
         'OUTPUT_FOLDER': os.getenv('OUTPUT_FOLDER', 'outputs'),
-        'MAX_CONTENT_LENGTH': int(os.getenv('MAX_CONTENT_LENGTH', 500000000)),  # 500MB
+        'MAX_CONTENT_LENGTH': int(os.getenv('MAX_CONTENT_LENGTH', 2147483648)),  # 2GB
         
         'GOOGLE_CLOUD_PROJECT': os.getenv('GOOGLE_CLOUD_PROJECT'),
         'GOOGLE_CLOUD_STORAGE_BUCKET': os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET'),

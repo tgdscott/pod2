@@ -426,6 +426,38 @@ def admin_template_detail(template_id):
     
     return render_template('admin_template_detail.html', template=template, token=session.get('token'))
 
+@web_bp.route('/admin/templates/<template_id>/edit')
+def admin_template_edit(template_id):
+    """Serve the template edit page"""
+    # Check if user is logged in
+    if 'token' not in session:
+        return redirect(url_for('web.login'))
+    
+    template = None
+    podcasts = []
+    
+    try:
+        headers = {'Authorization': f'Bearer {session["token"]}'}
+        
+        # Get template
+        response = requests.get(f"{API_BASE}/templates/{template_id}", headers=headers)
+        if response.status_code == 200:
+            template = response.json()
+        
+        # Get podcasts for the form
+        response = requests.get(f"{API_BASE}/podcasts", headers=headers)
+        if response.status_code == 200:
+            podcasts_data = response.json()
+            podcasts = podcasts_data.get('podcasts', [])
+    except Exception as e:
+        template = None
+        podcasts = []
+    
+    if not template:
+        return redirect(url_for('web.admin_templates'))
+    
+    return render_template('admin_edit_template.html', template=template, podcasts=podcasts, token=session.get('token'))
+
 @web_bp.route('/admin/files')
 def admin_files():
     """File management admin page"""

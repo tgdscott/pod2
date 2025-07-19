@@ -65,7 +65,7 @@
                         <div class="small text-muted">Uses</div>
                     </div>
                     <div class="col-6">
-                        <div class="fw-bold text-success">{{ template.structure.segments|length if template.structure and template.structure.segments else 0 }}</div>
+                        <div class="fw-bold text-success">{{ template.structure.content.segments|length if template.structure and template.structure.content and template.structure.content.segments else 0 }}</div>
                         <div class="small text-muted">Segments</div>
                     </div>
                 </div>
