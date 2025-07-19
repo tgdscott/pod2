@@ -265,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (music.file_id) {
             document.getElementById('backgroundMusic').value = 'existing';
             toggleMusicOptions();
-            // Note: We'll need to populate the music file dropdown
         }
         if (music.description) document.getElementById('musicDescription').value = music.description;
         if (music.start_point) document.getElementById('musicStart').value = music.start_point;
@@ -275,10 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     updateTemplatePreview();
+    
+    // Load audio files after segments are added
+    loadAudioFiles();
 });
-
-// Load audio files for dropdowns
-loadAudioFiles();
 
 function loadAudioFiles() {
     fetch('/api/v1/files/', {
@@ -308,6 +307,23 @@ function loadAudioFiles() {
         if (existingTemplate.structure && existingTemplate.structure.music && existingTemplate.structure.music.file_id) {
             musicSelect.value = existingTemplate.structure.music.file_id;
         }
+        
+        // Populate all segment audio file dropdowns
+        document.querySelectorAll('.upload-options select').forEach(select => {
+            select.innerHTML = '<option value="">Select audio file...</option>';
+            files.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.id;
+                option.textContent = file.filename;
+                select.appendChild(option);
+            });
+            
+            // Set the saved audio file value if it exists
+            const savedFileId = select.dataset.segmentAudioFile;
+            if (savedFileId) {
+                select.value = savedFileId;
+            }
+        });
     })
     .catch(error => {
         console.error('Error loading files:', error);
@@ -373,7 +389,7 @@ function addSegmentFromData(segmentData) {
                         
                         <div class="col-12 upload-options" style="display: ${segmentData.audio_source === 'upload' ? 'block' : 'none'};">
                             <label class="form-label">Audio File</label>
-                            <select class="form-select">
+                            <select class="form-select" data-segment-audio-file="${segmentData.audio_file || ''}">
                                 <option value="">Select audio file...</option>
                             </select>
                         </div>

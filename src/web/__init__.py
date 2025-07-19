@@ -225,17 +225,27 @@ def new_episode():
         return redirect(url_for('web.login'))
     
     podcasts = []
+    templates = []
     
     try:
         headers = {'Authorization': f'Bearer {session["token"]}'}
+        
+        # Get podcasts
         response = requests.get(f"{API_BASE}/podcasts", headers=headers)
         if response.status_code == 200:
             podcasts_data = response.json()
             podcasts = podcasts_data.get('podcasts', [])
+        
+        # Get templates
+        response = requests.get(f"{API_BASE}/templates", headers=headers)
+        if response.status_code == 200:
+            templates_data = response.json()
+            templates = templates_data.get('templates', [])
     except Exception as e:
         podcasts = []
+        templates = []
     
-    return render_template('new_episode.html', podcasts=podcasts)
+    return render_template('new_episode.html', podcasts=podcasts, templates=templates, token=session.get('token'))
 
 @web_bp.route('/episodes/<int:episode_id>')
 def episode_detail(episode_id):

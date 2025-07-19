@@ -33,6 +33,16 @@
                                     {% endfor %}
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="template_id" class="form-label">Template (Optional)</label>
+                                <select class="form-select" id="template_id" name="template_id">
+                                    <option value="">No template</option>
+                                    {% for template in templates %}
+                                    <option value="{{ template.id }}" {% if request.args.get('template_id') == template.id %}selected{% endif %}>{{ template.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Select a template to apply structure and AI segments</div>
+                            </div>
                             <div class="col-12">
                                 <label for="description" class="form-label">Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of this episode... (Will be AI-generated if left empty)"></textarea>
@@ -291,27 +301,48 @@ document.getElementById('audio_files').addEventListener('change', function(e) {
     checkPodcastTemplate();
 });
 
-// Check if selected podcast has a template
+// Check if selected podcast has a template or if template is manually selected
 function checkPodcastTemplate() {
     const podcastId = document.getElementById('podcast_id').value;
-    if (!podcastId) return;
+    const templateId = document.getElementById('template_id').value;
     
-    fetch(`/api/v1/podcasts/${podcastId}`, {
-        headers: {
-            'Authorization': 'Bearer {{ session.get("token", "") }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.podcast && data.podcast.default_template) {
-            loadTemplateConfig(data.podcast.default_template);
-        } else {
-            document.getElementById('templateSection').style.display = 'none';
-        }
-    })
-    .catch(error => {
-        console.error('Error checking podcast template:', error);
-    });
+    if (templateId) {
+        // Load selected template
+        fetch(`/api/v1/templates/${templateId}`, {
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.template) {
+                loadTemplateConfig(data.template);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+        });
+    } else if (podcastId) {
+        // Check if podcast has default template
+        fetch(`/api/v1/podcasts/${podcastId}`, {
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.podcast && data.podcast.default_template) {
+                loadTemplateConfig(data.podcast.default_template);
+            } else {
+                document.getElementById('templateSection').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking podcast template:', error);
+        });
+    } else {
+        document.getElementById('templateSection').style.display = 'none';
+    }
 }
 
 // Load template configuration
@@ -384,7 +415,8 @@ function loadVoices() {
     });
 }
 
-// Check template when podcast selection changes
+// Check template when podcast or template selection changes
 document.getElementById('podcast_id').addEventListener('change', checkPodcastTemplate);
+document.getElementById('template_id').addEventListener('change', checkPodcastTemplate);
 </script>
 {% endblock %} 
