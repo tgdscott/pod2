@@ -427,7 +427,8 @@ def admin_template_detail(template_id):
         headers = {'Authorization': f'Bearer {session["token"]}'}
         response = requests.get(f"{API_BASE}/templates/{template_id}", headers=headers)
         if response.status_code == 200:
-            template = response.json()
+            template_data = response.json()
+            template = template_data.get('template', template_data)
     except Exception as e:
         template = None
     
@@ -452,7 +453,8 @@ def admin_template_edit(template_id):
         # Get template
         response = requests.get(f"{API_BASE}/templates/{template_id}", headers=headers)
         if response.status_code == 200:
-            template = response.json()
+            template_data = response.json()
+            template = template_data.get('template', template_data)
         
         # Get podcasts for the form
         response = requests.get(f"{API_BASE}/podcasts", headers=headers)

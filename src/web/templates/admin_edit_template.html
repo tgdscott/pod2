@@ -289,17 +289,23 @@ function loadAudioFiles() {
     .then(response => response.json())
     .then(data => {
         const files = data.files || [];
+        console.log('Loaded files:', files);
         
         // Populate music file dropdown
         const musicSelect = document.getElementById('musicFile');
         musicSelect.innerHTML = '<option value="">Select a music file...</option>';
         
         files.forEach(file => {
-            if (file.category === 'music' || file.filename.toLowerCase().includes('music') || 
-                file.filename.toLowerCase().includes('background') || file.filename.toLowerCase().includes('bed')) {
+            // Use the correct field names from the API
+            const fileId = file.db_id || file.id;
+            const fileName = file.filename || file.name;
+            const fileCategory = file.db_category || file.category;
+            
+            if (fileCategory === 'music' || fileName.toLowerCase().includes('music') || 
+                fileName.toLowerCase().includes('background') || fileName.toLowerCase().includes('bed')) {
                 const option = document.createElement('option');
-                option.value = file.id;
-                option.textContent = file.filename;
+                option.value = fileId;
+                option.textContent = fileName;
                 musicSelect.appendChild(option);
             }
         });
@@ -313,9 +319,13 @@ function loadAudioFiles() {
         document.querySelectorAll('.upload-options select').forEach(select => {
             select.innerHTML = '<option value="">Select audio file...</option>';
             files.forEach(file => {
+                // Use the correct field names from the API
+                const fileId = file.db_id || file.id;
+                const fileName = file.filename || file.name;
+                
                 const option = document.createElement('option');
-                option.value = file.id;
-                option.textContent = file.filename;
+                option.value = fileId;
+                option.textContent = fileName;
                 select.appendChild(option);
             });
             
