@@ -220,7 +220,6 @@
                 <ul class="small">
                     <li><strong>Upload File:</strong> Use your own audio files</li>
                     <li><strong>Generate with AI:</strong> AI voice generation</li>
-                    <li><strong>Episode Audio:</strong> Uses the main episode content</li>
                 </ul>
                 
                 <h6>AI Integration:</h6>
@@ -368,7 +367,6 @@ function addSegmentFromData(segmentData) {
                             <select class="form-select" onchange="toggleAudioOptions(this)">
                                 <option value="upload" ${segmentData.audio_source === 'upload' ? 'selected' : ''}>Upload File</option>
                                 <option value="ai" ${segmentData.audio_source === 'ai' ? 'selected' : ''}>Generate with AI</option>
-                                <option value="episode" ${segmentData.audio_source === 'episode' ? 'selected' : ''}>Episode Audio</option>
                             </select>
                         </div>
                         

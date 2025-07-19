@@ -197,9 +197,9 @@
                             <div class="card-body text-center">
                                 <h6>Storage Used</h6>
                                 <div class="progress mb-2">
-                                    <div class="progress-bar" role="progressbar" style="width: 65%"></div>
+                                    <div class="progress-bar" role="progressbar" id="storageProgress" style="width: 0%"></div>
                                 </div>
-                                <small class="text-muted">6.5 GB of 10 GB used</small>
+                                <small class="text-muted" id="storageText">Loading...</small>
                             </div>
                         </div>
                     </div>
@@ -208,7 +208,7 @@
                         <div class="card bg-light">
                             <div class="card-body text-center">
                                 <h6>Files</h6>
-                                <h4 class="mb-0">24</h4>
+                                <h4 class="mb-0" id="fileCount">-</h4>
                                 <small class="text-muted">Audio files uploaded</small>
                             </div>
                         </div>
@@ -283,6 +283,7 @@ if (!authToken) {
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadCurrentSettings();
+    loadStorageInfo();
     
     // Voice stability slider
     document.getElementById('defaultStability').addEventListener('input', function() {
@@ -348,6 +349,37 @@ function loadCurrentSettings() {
     })
     .catch(error => {
         console.error('Error loading settings:', error);
+    });
+}
+
+function loadStorageInfo() {
+    // Load storage usage information
+    fetch('/api/v1/settings/storage', {
+        headers: {
+            'Authorization': `Bearer ${authToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const storage = data.storage;
+            
+            // Update progress bar
+            const progressBar = document.getElementById('storageProgress');
+            progressBar.style.width = `${storage.usage_percentage}%`;
+            
+            // Update storage text
+            document.getElementById('storageText').textContent = 
+                `${storage.used_gb} GB of ${storage.limit_gb} GB used`;
+            
+            // Update file count
+            document.getElementById('fileCount').textContent = storage.file_count;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading storage info:', error);
+        document.getElementById('storageText').textContent = 'Error loading storage info';
+        document.getElementById('fileCount').textContent = '?';
     });
 }
 
