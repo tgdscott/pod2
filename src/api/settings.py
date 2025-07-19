@@ -204,10 +204,10 @@ def default_voice_settings():
             user.default_voice_stability = stability
             db.commit()
             
-                    return jsonify({
-            'success': True,
-            'message': 'Default voice settings saved successfully'
-        })
+            return jsonify({
+                'success': True,
+                'message': 'Default voice settings saved successfully'
+            })
         
     except Exception as e:
         return jsonify({
