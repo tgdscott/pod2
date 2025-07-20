@@ -140,6 +140,13 @@ def create_app(config_name: str = 'development') -> Flask:
     # Register Celery tasks
     from src.core.tasks import register_tasks
     register_tasks(celery)
+
+    @app.route('/api/v1/debug/routes')
+    def debug_routes():
+        output = []
+        for rule in app.url_map.iter_rules():
+            output.append(f"{sorted(rule.methods)} {rule.rule}")
+        return "<br>".join(sorted(output))
     
     return app
 
