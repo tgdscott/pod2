@@ -138,6 +138,9 @@
 {% endif %}
 
 <script>
+// Global token for API calls
+const API_TOKEN = '{{ token }}';
+
 // Filter functionality
 document.getElementById('search').addEventListener('input', filterEpisodes);
 document.getElementById('status-filter').addEventListener('change', filterEpisodes);
@@ -179,7 +182,7 @@ function deleteEpisode(episodeId) {
         fetch(`/api/v1/episodes/${episodeId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                'Authorization': 'Bearer ' + API_TOKEN
             }
         })
         .then(function(response) {

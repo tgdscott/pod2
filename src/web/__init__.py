@@ -215,7 +215,7 @@ def episodes():
         episodes = []
         podcasts = []
     
-    return render_template('episodes.html', episodes=episodes, podcasts=podcasts, pagination=pagination)
+    return render_template('episodes.html', episodes=episodes, podcasts=podcasts, pagination=pagination, token=session.get('token'))
 
 @web_bp.route('/episodes/new')
 def new_episode():

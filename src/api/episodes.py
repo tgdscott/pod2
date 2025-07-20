@@ -243,7 +243,7 @@ def process_episode(episode_id):
             audio_files.append(str(file_path))
 
         if not audio_files:
-            return {'error': 'No valid audio files found'}, 400
+            return {'error': 'No audio files found. Please upload audio files before processing this episode.'}, 400
 
         # Create processing job
         job = Job(
@@ -421,37 +421,39 @@ def download_episode(episode_id):
 @episodes_bp.route('/<episode_id>', methods=['DELETE'])
 @jwt_required()
 def delete_episode(episode_id):
-    """Delete episode"""
+    """Delete an episode"""
     try:
         user_id = get_jwt_identity()
         db = get_db_session()
-
+        
         # Get episode with ownership check
         episode = db.query(Episode).join(Podcast).filter(
             Episode.id == episode_id,
             Podcast.user_id == user_id
         ).first()
-
+        
         if not episode:
             return {'error': 'Episode not found'}, 404
-
-        # Delete output file if it exists
+        
+        # Delete associated output file if it exists
         if episode.output_file:
-            output_file = Path(episode.output_file)
-            if output_file.exists():
-                output_file.unlink()
-
-        # Delete related jobs
-        db.query(Job).filter_by(episode_id=episode_id).delete()
-
-        # Delete episode
+            output_path = Path(episode.output_file)
+            if output_path.exists():
+                try:
+                    output_path.unlink()
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to delete output file {episode.output_file}: {str(e)}")
+        
+        # Delete episode from database
         db.delete(episode)
         db.commit()
-
-        return {'message': 'Episode deleted successfully'}
-
+        
+        return {
+            'message': 'Episode deleted successfully'
+        }
+        
     except Exception as e:
-        current_app.logger.error(f"Episode deletion error: {str(e)}")
+        current_app.logger.error(f"Delete episode error: {str(e)}")
         return {'error': 'Failed to delete episode'}, 500
 
 
