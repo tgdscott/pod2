@@ -102,8 +102,10 @@ def create_episode():
             podcast_id=data['podcast_id'],
             title=data['title'],
             description=data.get('description', ''),
+            episode_number=data.get('episode_number'),
+            season_number=data.get('season_number', 1),
             status='draft',
-            episode_metadata=data.get('metadata', {}),
+            episode_metadata=data.get('template_config', {}),  # Save template_config as episode_metadata
             audio_files=data.get('audio_files', []),
             template_id=data.get('template_id')
         )
@@ -164,7 +166,7 @@ def update_episode(episode_id):
             return {'error': 'Episode not found'}, 404
 
         # Update allowed fields
-        updatable_fields = ['title', 'description', 'episode_metadata', 'audio_files', 'template_id']
+        updatable_fields = ['title', 'description', 'episode_number', 'season_number', 'episode_metadata', 'audio_files', 'template_id']
         for field in updatable_fields:
             if field in data:
                 setattr(episode, field, data[field])
