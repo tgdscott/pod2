@@ -43,6 +43,16 @@
                                 </select>
                                 <div class="form-text">Select a template to apply structure and AI segments</div>
                             </div>
+                            <div class="col-md-6">
+                                <label for="episode_number" class="form-label">Episode Number</label>
+                                <input type="number" class="form-control" id="episode_number" name="episode_number" placeholder="e.g., 168">
+                                <div class="form-text">Optional episode number for your series</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="season_number" class="form-label">Season Number</label>
+                                <input type="number" class="form-control" id="season_number" name="season_number" value="1" min="1">
+                                <div class="form-text">Season number (defaults to 1)</div>
+                            </div>
                             <div class="col-12">
                                 <label for="description" class="form-label">Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of this episode... (Will be AI-generated if left empty)"></textarea>
@@ -398,6 +408,8 @@ document.getElementById('episodeForm').addEventListener('submit', function(e) {
             title: title,
             podcast_id: podcastId,
             description: description,
+            episode_number: document.getElementById('episode_number').value ? parseInt(document.getElementById('episode_number').value) : null,
+            season_number: parseInt(document.getElementById('season_number').value) || 1,
             audio_files: fileDataArray.map(data => data.file.id),
             transcribe: transcribe,
             apply_template: applyTemplate,

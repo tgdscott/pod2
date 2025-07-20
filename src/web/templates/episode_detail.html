@@ -257,6 +257,27 @@
                             <input type="number" class="form-control" id="editSeasonNumber" name="season_number" value="{{ episode.season_number or 1 }}">
                         </div>
                     </div>
+                    
+                    <!-- AI Prompts Section -->
+                    {% if episode.template_id and episode.episode_metadata and episode.episode_metadata.ai_segments %}
+                    <hr>
+                    <h6 class="mb-3">AI Prompts</h6>
+                    <div class="row g-3">
+                        {% for segment in episode.episode_metadata.ai_segments %}
+                        <div class="col-12">
+                            <label for="ai_prompt_{{ loop.index0 }}" class="form-label">{{ segment.segment_type|title }} AI Prompt</label>
+                            <textarea 
+                                class="form-control" 
+                                id="ai_prompt_{{ loop.index0 }}" 
+                                name="ai_prompt_{{ loop.index0 }}" 
+                                rows="2"
+                                placeholder="Enter AI prompt for {{ segment.segment_type }} segment..."
+                            >{{ segment.ai_prompt or '' }}</textarea>
+                            <div class="form-text">This prompt will be used to generate the {{ segment.segment_type }} segment</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </form>
             </div>
             <div class="modal-footer">
@@ -285,6 +306,27 @@ function saveEpisodeChanges() {
         episode_number: formData.get('episode_number') ? parseInt(formData.get('episode_number')) : null,
         season_number: parseInt(formData.get('season_number')) || 1
     };
+    
+    // Collect AI prompts if they exist
+    const aiSegments = [];
+    let promptIndex = 0;
+    while (formData.get(`ai_prompt_${promptIndex}`) !== null) {
+        const prompt = formData.get(`ai_prompt_${promptIndex}`);
+        if (prompt && prompt.trim()) {
+            aiSegments.push({
+                segment_index: promptIndex,
+                ai_prompt: prompt.trim()
+            });
+        }
+        promptIndex++;
+    }
+    
+    // Add AI segments to metadata if any exist
+    if (aiSegments.length > 0) {
+        data.episode_metadata = {
+            ai_segments: aiSegments
+        };
+    }
     
     // Validate required fields
     if (!data.title.trim()) {
@@ -383,8 +425,10 @@ function processEpisode() {
         fetch('/api/v1/episodes/{{ episode.id }}/process', {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': 'Bearer {{ session.get("token", "") }}'
-            }
+            },
+            body: JSON.stringify({}) // Send empty JSON object
         })
         .then(function(response) {
             if (response.ok) {
