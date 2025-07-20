@@ -59,9 +59,13 @@
                         <label class="form-label fw-bold">Created</label>
                         <div>
                             {% if template.created_at %}
-                            {{ template.created_at.strftime('%b %d, %Y') if template.created_at is string else template.created_at.strftime('%b %d, %Y') }}
+                                {% if template.created_at is string %}
+                                    {{ template.created_at }}
+                                {% else %}
+                                    {{ template.created_at.strftime('%b %d, %Y') }}
+                                {% endif %}
                             {% else %}
-                            Unknown
+                                Unknown
                             {% endif %}
                         </div>
                     </div>
