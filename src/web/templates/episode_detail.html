@@ -161,6 +161,11 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    {% if episode.status == 'draft' %}
+                    <button class="btn btn-success" onclick="processEpisode()">
+                        <i class="fas fa-play me-2"></i>Process Episode
+                    </button>
+                    {% endif %}
                     {% if episode.status == 'completed' %}
                     <a href="/episodes/{{ episode.id }}/download" class="btn btn-success">
                         <i class="fas fa-download me-2"></i>Download Episode
@@ -169,9 +174,11 @@
                     <button class="btn btn-outline-primary" onclick="editEpisode()">
                         <i class="fas fa-edit me-2"></i>Edit Episode
                     </button>
+                    {% if episode.status == 'completed' %}
                     <button class="btn btn-outline-secondary" onclick="reprocessEpisode()">
                         <i class="fas fa-redo me-2"></i>Reprocess
                     </button>
+                    {% endif %}
                     <button class="btn btn-outline-danger" onclick="deleteEpisode()">
                         <i class="fas fa-trash me-2"></i>Delete Episode
                     </button>
@@ -186,15 +193,24 @@
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-6">Episode ID</dt>
-                    <dd class="col-sm-6">{{ episode.id }}</dd>
+                    {% if episode.episode_number %}
+                    <dt class="col-sm-6">Episode Number</dt>
+                    <dd class="col-sm-6">{{ episode.episode_number }}</dd>
+                    {% endif %}
                     
-                    <dt class="col-sm-6">Podcast ID</dt>
-                    <dd class="col-sm-6">{{ episode.podcast_id }}</dd>
+                    {% if episode.season_number %}
+                    <dt class="col-sm-6">Season</dt>
+                    <dd class="col-sm-6">{{ episode.season_number }}</dd>
+                    {% endif %}
                     
-                    {% if episode.template_id %}
-                    <dt class="col-sm-6">Template</dt>
-                    <dd class="col-sm-6">{{ episode.template_id }}</dd>
+                    {% if episode.duration %}
+                    <dt class="col-sm-6">Duration</dt>
+                    <dd class="col-sm-6">{{ episode.duration_formatted or episode.duration }}</dd>
+                    {% endif %}
+                    
+                    {% if episode.file_size_bytes %}
+                    <dt class="col-sm-6">File Size</dt>
+                    <dd class="col-sm-6">{{ (episode.file_size_bytes / 1024 / 1024) | round(1) }} MB</dd>
                     {% endif %}
                     
                     {% if episode.updated_at %}
@@ -213,10 +229,109 @@
     </div>
 </div>
 
+<!-- Edit Episode Modal -->
+<div class="modal fade" id="editEpisodeModal" tabindex="-1" aria-labelledby="editEpisodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editEpisodeModalLabel">Edit Episode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEpisodeForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editTitle" class="form-label">Episode Title *</label>
+                            <input type="text" class="form-control" id="editTitle" name="title" value="{{ episode.title }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription" name="description" rows="3">{{ episode.description or '' }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editEpisodeNumber" class="form-label">Episode Number</label>
+                            <input type="number" class="form-control" id="editEpisodeNumber" name="episode_number" value="{{ episode.episode_number or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editSeasonNumber" class="form-label">Season Number</label>
+                            <input type="number" class="form-control" id="editSeasonNumber" name="season_number" value="{{ episode.season_number or 1 }}">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEpisodeChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function editEpisode() {
-    // TODO: Implement edit functionality
-    alert('Edit functionality coming soon!');
+    // Show the edit modal
+    const modal = new bootstrap.Modal(document.getElementById('editEpisodeModal'));
+    modal.show();
+}
+
+function saveEpisodeChanges() {
+    const form = document.getElementById('editEpisodeForm');
+    const formData = new FormData(form);
+    
+    // Convert form data to JSON
+    const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        episode_number: formData.get('episode_number') ? parseInt(formData.get('episode_number')) : null,
+        season_number: parseInt(formData.get('season_number')) || 1
+    };
+    
+    // Validate required fields
+    if (!data.title.trim()) {
+        alert('Episode title is required');
+        return;
+    }
+    
+    // Show loading state
+    const saveButton = document.querySelector('#editEpisodeModal .btn-primary');
+    const originalText = saveButton.textContent;
+    saveButton.textContent = 'Saving...';
+    saveButton.disabled = true;
+    
+    // Send update request
+    fetch('/api/v1/episodes/{{ episode.id }}', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Failed to update episode');
+        }
+        return response.json();
+    })
+    .then(function(result) {
+        // Close modal and reload page
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editEpisodeModal'));
+        modal.hide();
+        
+        // Show success message
+        alert('Episode updated successfully!');
+        
+        // Reload page to show updated data
+        location.reload();
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        alert('Failed to update episode: ' + error.message);
+        
+        // Reset button state
+        saveButton.textContent = originalText;
+        saveButton.disabled = false;
+    });
 }
 
 function deleteEpisode() {
@@ -259,6 +374,28 @@ function reprocessEpisode() {
         .catch(function(error) {
             console.error('Error:', error);
             alert('Failed to start reprocessing');
+        });
+    }
+}
+
+function processEpisode() {
+    if (confirm('Are you sure you want to process this episode? This will start the processing from the beginning.')) {
+        fetch('/api/v1/episodes/{{ episode.id }}/process', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer {{ session.get("token", "") }}'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to start processing');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            alert('Failed to start processing');
         });
     }
 }
