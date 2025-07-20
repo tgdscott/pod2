@@ -12,7 +12,6 @@ from pathlib import Path
 import uuid
 from datetime import datetime
 from pydub import AudioSegment
-from pydub.effects import fade_in, fade_out
 
 class AdvancedAudioProcessor:
     """Advanced audio processing for podcast templates"""
@@ -44,10 +43,14 @@ class AdvancedAudioProcessor:
     def apply_fade(self, audio: AudioSegment, fade_in_duration: float = 0, fade_out_duration: float = 0) -> AudioSegment:
         """Apply fade in/out to audio segment"""
         if fade_in_duration > 0:
-            audio = fade_in(audio, fade_in_duration * 1000)  # Convert to milliseconds
+            # Apply fade in manually
+            fade_ms = int(fade_in_duration * 1000)
+            audio = audio.fade_in(fade_ms)
         
         if fade_out_duration > 0:
-            audio = fade_out(audio, fade_out_duration * 1000)  # Convert to milliseconds
+            # Apply fade out manually
+            fade_ms = int(fade_out_duration * 1000)
+            audio = audio.fade_out(fade_ms)
         
         return audio
     
