@@ -185,6 +185,7 @@ def update_episode(episode_id):
 
 
 @episodes_bp.route('/<episode_id>/process', methods=['POST'])
+@episodes_bp.route('/<episode_id>/process/', methods=['POST'])
 @jwt_required()
 def process_episode(episode_id):
     """Start processing episode"""
@@ -243,7 +244,7 @@ def process_episode(episode_id):
             audio_files.append(str(file_path))
 
         if not audio_files:
-            return {'error': 'No audio files found. Please upload audio files before processing this episode.'}, 400
+            return {'error': 'No valid audio files found'}, 400
 
         # Create processing job
         job = Job(
@@ -268,95 +269,34 @@ def process_episode(episode_id):
 
         db.commit()
 
-        # For now, process synchronously instead of using Celery
-        # This avoids the need for Redis/Celery setup
+        # Start background processing with Celery
         try:
-            current_app.logger.info(f"Starting real episode processing for episode {episode_id}")
-            
-            # Import the audio processor
-            from src.core.advanced_audio_processor import AdvancedAudioProcessor
-            
-            # Initialize audio processor
-            output_dir = current_app.config.get('OUTPUT_FOLDER', 'outputs')
-            audio_processor = AdvancedAudioProcessor(output_dir=output_dir)
-            
-            # Create output filename
-            output_filename = f"episode_{episode_id}.mp3"
-            output_path = Path(output_dir) / output_filename
-            
-            # Process the audio files
-            if audio_files:
-                current_app.logger.info(f"Processing {len(audio_files)} audio files")
-                
-                # Load and concatenate all audio files
-                combined_audio = None
-                total_duration = 0
-                
-                for i, audio_file_path in enumerate(audio_files):
-                    current_app.logger.info(f"Processing audio file {i+1}/{len(audio_files)}: {audio_file_path}")
-                    
-                    # Load the audio file
-                    audio_segment = audio_processor.load_audio_file(audio_file_path)
-                    if audio_segment is None:
-                        current_app.logger.error(f"Failed to load audio file: {audio_file_path}")
-                        continue
-                    
-                    # Add to combined audio
-                    if combined_audio is None:
-                        combined_audio = audio_segment
-                    else:
-                        combined_audio = combined_audio + audio_segment
-                    
-                    total_duration += len(audio_segment) / 1000  # Convert to seconds
-                    current_app.logger.info(f"Added {len(audio_segment) / 1000:.2f}s, total: {total_duration:.2f}s")
-                
-                if combined_audio is not None:
-                    # Normalize the audio
-                    current_app.logger.info("Normalizing audio...")
-                    combined_audio = audio_processor.normalize_audio(combined_audio, target_dBFS=-20.0)
-                    
-                    # Export the final audio
-                    current_app.logger.info(f"Exporting to {output_path}")
-                    combined_audio.export(str(output_path), format='mp3', bitrate='192k')
-                    
-                    # Get file size
-                    file_size = output_path.stat().st_size if output_path.exists() else 0
-                    
-                    current_app.logger.info(f"Episode processing completed: {total_duration:.2f}s, {file_size} bytes")
-                    
-                    # Update job status
-                    job.status = 'completed'
-                    job.progress_percent = 100
-                    job.completed_at = datetime.now(timezone.utc)
-                    job.output_data = {
-                        'message': 'Episode processed successfully',
-                        'output_file': str(output_path),
-                        'duration': total_duration,
-                        'file_size': file_size
-                    }
-                    
-                    # Update episode status
-                    episode.status = 'completed'
-                    episode.output_file = str(output_path)
-                    episode.duration = int(total_duration)
-                    episode.file_size_bytes = file_size
-                    episode.updated_at = datetime.now(timezone.utc)
-                    
-                else:
-                    raise Exception("No valid audio files could be processed")
-            else:
-                raise Exception("No audio files provided for processing")
-            
-            db.commit()
-            
-            current_app.logger.info(f"Episode processing completed for episode {episode_id}")
+            # Re-get the db session to ensure it's fresh for the Celery task context if needed
+            # This line might not be strictly necessary if get_db_session always returns a new session
+            # or manages session lifecycle correctly for background tasks.
+            # However, for demonstration, keeping it here as it was in the original.
+            db = get_db_session() 
+            from src.api.app import celery
 
-        except Exception as processing_error:
-            current_app.logger.error(f"Episode processing failed: {str(processing_error)}")
+            # Queue episode processing task
+            task = celery.send_task(
+                'podcast_tasks.process_episode',
+                args=[episode_id, user_id, job.id],
+                queue='episode_processing'
+            )
+
+            # Store task ID in job
+            job.task_id = task.id
+            db.commit()
+
+            current_app.logger.info(f"Queued episode processing task {task.id} for episode {episode_id}")
+
+        except Exception as queue_error:
+            current_app.logger.error(f"Failed to queue episode processing: {str(queue_error)}")
 
             # Update job with error
             job.status = 'failed'
-            job.error_message = f"Processing failed: {str(processing_error)}"
+            job.error_message = f"Failed to start processing: {str(queue_error)}"
             job.completed_at = datetime.now(timezone.utc)
 
             # Update episode
@@ -365,7 +305,7 @@ def process_episode(episode_id):
 
             db.commit()
 
-            return {'error': f'Processing failed: {str(processing_error)}'}, 500
+            return {'error': f'Failed to start processing: {str(queue_error)}'}, 500
 
         return {
             'message': 'Episode processing started',
@@ -421,39 +361,37 @@ def download_episode(episode_id):
 @episodes_bp.route('/<episode_id>', methods=['DELETE'])
 @jwt_required()
 def delete_episode(episode_id):
-    """Delete an episode"""
+    """Delete episode"""
     try:
         user_id = get_jwt_identity()
         db = get_db_session()
-        
+
         # Get episode with ownership check
         episode = db.query(Episode).join(Podcast).filter(
             Episode.id == episode_id,
             Podcast.user_id == user_id
         ).first()
-        
+
         if not episode:
             return {'error': 'Episode not found'}, 404
-        
-        # Delete associated output file if it exists
+
+        # Delete output file if it exists
         if episode.output_file:
-            output_path = Path(episode.output_file)
-            if output_path.exists():
-                try:
-                    output_path.unlink()
-                except Exception as e:
-                    current_app.logger.warning(f"Failed to delete output file {episode.output_file}: {str(e)}")
-        
-        # Delete episode from database
+            output_file = Path(episode.output_file)
+            if output_file.exists():
+                output_file.unlink()
+
+        # Delete related jobs
+        db.query(Job).filter_by(episode_id=episode_id).delete()
+
+        # Delete episode
         db.delete(episode)
         db.commit()
-        
-        return {
-            'message': 'Episode deleted successfully'
-        }
-        
+
+        return {'message': 'Episode deleted successfully'}
+
     except Exception as e:
-        current_app.logger.error(f"Delete episode error: {str(e)}")
+        current_app.logger.error(f"Episode deletion error: {str(e)}")
         return {'error': 'Failed to delete episode'}, 500
 
 
