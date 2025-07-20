@@ -271,25 +271,81 @@ def process_episode(episode_id):
         # For now, process synchronously instead of using Celery
         # This avoids the need for Redis/Celery setup
         try:
-            current_app.logger.info(f"Starting synchronous episode processing for episode {episode_id}")
+            current_app.logger.info(f"Starting real episode processing for episode {episode_id}")
             
-            # Simulate processing (in a real app, this would do actual audio processing)
-            import time
-            time.sleep(2)  # Simulate processing time
+            # Import the audio processor
+            from src.core.advanced_audio_processor import AdvancedAudioProcessor
             
-            # Update job status
-            job.status = 'completed'
-            job.progress_percent = 100
-            job.completed_at = datetime.now(timezone.utc)
-            job.output_data = {
-                'message': 'Episode processed successfully',
-                'output_file': f'outputs/episode_{episode_id}.mp3'
-            }
+            # Initialize audio processor
+            output_dir = current_app.config.get('OUTPUT_FOLDER', 'outputs')
+            audio_processor = AdvancedAudioProcessor(output_dir=output_dir)
             
-            # Update episode status
-            episode.status = 'completed'
-            episode.output_file = f'outputs/episode_{episode_id}.mp3'
-            episode.updated_at = datetime.now(timezone.utc)
+            # Create output filename
+            output_filename = f"episode_{episode_id}.mp3"
+            output_path = Path(output_dir) / output_filename
+            
+            # Process the audio files
+            if audio_files:
+                current_app.logger.info(f"Processing {len(audio_files)} audio files")
+                
+                # Load and concatenate all audio files
+                combined_audio = None
+                total_duration = 0
+                
+                for i, audio_file_path in enumerate(audio_files):
+                    current_app.logger.info(f"Processing audio file {i+1}/{len(audio_files)}: {audio_file_path}")
+                    
+                    # Load the audio file
+                    audio_segment = audio_processor.load_audio_file(audio_file_path)
+                    if audio_segment is None:
+                        current_app.logger.error(f"Failed to load audio file: {audio_file_path}")
+                        continue
+                    
+                    # Add to combined audio
+                    if combined_audio is None:
+                        combined_audio = audio_segment
+                    else:
+                        combined_audio = combined_audio + audio_segment
+                    
+                    total_duration += len(audio_segment) / 1000  # Convert to seconds
+                    current_app.logger.info(f"Added {len(audio_segment) / 1000:.2f}s, total: {total_duration:.2f}s")
+                
+                if combined_audio is not None:
+                    # Normalize the audio
+                    current_app.logger.info("Normalizing audio...")
+                    combined_audio = audio_processor.normalize_audio(combined_audio, target_dBFS=-20.0)
+                    
+                    # Export the final audio
+                    current_app.logger.info(f"Exporting to {output_path}")
+                    combined_audio.export(str(output_path), format='mp3', bitrate='192k')
+                    
+                    # Get file size
+                    file_size = output_path.stat().st_size if output_path.exists() else 0
+                    
+                    current_app.logger.info(f"Episode processing completed: {total_duration:.2f}s, {file_size} bytes")
+                    
+                    # Update job status
+                    job.status = 'completed'
+                    job.progress_percent = 100
+                    job.completed_at = datetime.now(timezone.utc)
+                    job.output_data = {
+                        'message': 'Episode processed successfully',
+                        'output_file': str(output_path),
+                        'duration': total_duration,
+                        'file_size': file_size
+                    }
+                    
+                    # Update episode status
+                    episode.status = 'completed'
+                    episode.output_file = str(output_path)
+                    episode.duration = int(total_duration)
+                    episode.file_size_bytes = file_size
+                    episode.updated_at = datetime.now(timezone.utc)
+                    
+                else:
+                    raise Exception("No valid audio files could be processed")
+            else:
+                raise Exception("No audio files provided for processing")
             
             db.commit()
             
