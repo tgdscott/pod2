@@ -48,9 +48,13 @@
                         <label class="form-label fw-bold">Created</label>
                         <div>
                             {% if episode.created_at %}
-                            {{ episode.created_at.strftime('%B %d, %Y at %I:%M %p') if episode.created_at is string else episode.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                {% if episode.created_at is string %}
+                                    {{ episode.created_at }}
+                                {% else %}
+                                    {{ episode.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                {% endif %}
                             {% else %}
-                            Not available
+                                Not available
                             {% endif %}
                         </div>
                     </div>
@@ -195,7 +199,13 @@
                     
                     {% if episode.updated_at %}
                     <dt class="col-sm-6">Last Updated</dt>
-                    <dd class="col-sm-6">{{ episode.updated_at.strftime('%B %d, %Y') if episode.updated_at is string else episode.updated_at.strftime('%B %d, %Y') }}</dd>
+                    <dd class="col-sm-6">
+                        {% if episode.updated_at is string %}
+                            {{ episode.updated_at }}
+                        {% else %}
+                            {{ episode.updated_at.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    </dd>
                     {% endif %}
                 </dl>
             </div>

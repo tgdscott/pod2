@@ -247,7 +247,7 @@ def new_episode():
     
     return render_template('new_episode.html', podcasts=podcasts, templates=templates, token=session.get('token'))
 
-@web_bp.route('/episodes/<int:episode_id>')
+@web_bp.route('/episodes/<episode_id>')
 def episode_detail(episode_id):
     """Serve the episode detail page"""
     # Check if user is logged in
@@ -260,7 +260,8 @@ def episode_detail(episode_id):
         headers = {'Authorization': f'Bearer {session["token"]}'}
         response = requests.get(f"{API_BASE}/episodes/{episode_id}", headers=headers)
         if response.status_code == 200:
-            episode = response.json()
+            episode_data = response.json()
+            episode = episode_data.get('episode', episode_data)
     except Exception as e:
         episode = None
     
