@@ -35,6 +35,10 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Template Name</label>
+                        <div class="h4 text-primary">{{ template.name or 'Unnamed Template' }}</div>
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Type</label>
                         <div>
@@ -100,7 +104,9 @@
                                         {% endif %}
                                     </div>
                                     {% if segment.audio_file %}
-                                    <span class="badge bg-secondary">{{ segment.audio_file }}</span>
+                                    <span class="badge bg-secondary" data-file-id="{{ segment.audio_file }}" data-segment-index="{{ loop.index0 }}">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -275,11 +281,7 @@ function deleteTemplate() {
             if (response.ok) {
                 window.location.href = '/admin/templates';
             } else {
-                response.json().then(function(data) {
-                    alert('Failed to delete template: ' + (data.error || 'Unknown error'));
-                }).catch(function() {
-                    alert('Failed to delete template');
-                });
+                alert('Failed to delete template');
             }
         })
         .catch(function(error) {
@@ -298,5 +300,63 @@ function importTemplate() {
     // TODO: Implement template import
     alert('Template import coming soon!');
 }
+
+// Load file names to replace UUIDs
+function loadFileNames() {
+    fetch('/api/v1/files/', {
+        headers: {
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const files = data.files || [];
+        const fileMap = {};
+        
+        // Create a map of file IDs to file names
+        files.forEach(file => {
+            const fileId = file.db_id || file.id;
+            const fileName = file.db_name || file.filename || file.name;
+            const fileDuration = file.duration;
+            
+            if (fileId && fileName) {
+                let displayName = fileName;
+                if (fileDuration) {
+                    const minutes = Math.floor(fileDuration / 60);
+                    const seconds = Math.floor(fileDuration % 60);
+                    displayName = `${fileName} (${minutes}:${seconds.toString().padStart(2, '0')})`;
+                }
+                fileMap[fileId] = displayName;
+            }
+        });
+        
+        // Update all file badges
+        document.querySelectorAll('[data-file-id]').forEach(badge => {
+            const fileId = badge.dataset.fileId;
+            const fileName = fileMap[fileId];
+            
+            if (fileName) {
+                badge.innerHTML = `<i class="fas fa-music"></i> ${fileName}`;
+                badge.className = 'badge bg-success';
+            } else {
+                badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> File not found';
+                badge.className = 'badge bg-warning';
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading file names:', error);
+        // Show error state
+        document.querySelectorAll('[data-file-id]').forEach(badge => {
+            badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error loading file';
+            badge.className = 'badge bg-danger';
+        });
+    });
+}
+
+// Load file names when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadFileNames();
+});
 </script>
 {% endblock %} 
