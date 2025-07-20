@@ -291,27 +291,32 @@ def upload_audio_files():
 @files_bp.route('/<file_id>', methods=['GET'])
 @jwt_required()
 def get_file(file_id):
-    """Get a specific file"""
+    """Get a specific file (supports both File and UserFile tables)"""
     try:
         user_id = get_jwt_identity()
         db = get_db_session()
-        
         try:
+            # Try new File table first
+            file = db.query(File).filter(
+                File.id == file_id,
+                File.user_id == user_id
+            ).first()
+            if file:
+                return {
+                    'file': file.to_dict()
+                }
+            # Fallback to legacy UserFile table
             user_file = db.query(UserFile).filter(
                 UserFile.id == file_id,
                 UserFile.user_id == user_id
             ).first()
-            
-            if not user_file:
-                return {'error': 'File not found'}, 404
-            
-            return {
-                'file': user_file.to_dict()
-            }
-            
+            if user_file:
+                return {
+                    'file': user_file.to_dict()
+                }
+            return {'error': 'File not found'}, 404
         finally:
             db.close()
-        
     except Exception as e:
         current_app.logger.error(f"Get file error: {str(e)}")
         return {'error': 'Failed to get file'}, 500
