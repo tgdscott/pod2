@@ -526,15 +526,15 @@ function loadTemplateConfig(template) {
     const templateConfigSection = document.getElementById('templateConfigSection');
     const templateConfig = document.getElementById('templateConfig');
     
-    if (!template.structure || !template.structure.content || !template.structure.content.segments) {
+    if (!template.structure || !template.structure.segments) {
         templateConfigSection.style.display = 'none';
         return;
     }
     
     let configHtml = '<div class="row g-3">';
     
-    template.structure.content.segments.forEach((segment, index) => {
-        if (segment.audio_source === 'ai') {
+    template.structure.segments.forEach((segment, index) => {
+        if (segment.audio_source === 'ai' || segment.ai_prompt) {
             configHtml += `
                 <div class="col-12 ai-segment-config" data-segment-type="${segment.type}">
                     <div class="card">
