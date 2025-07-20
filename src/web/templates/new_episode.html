@@ -72,12 +72,12 @@
                         </div>
                     </div>
 
-                    <!-- Template Selection -->
-                    <div class="mb-4" id="templateSection" style="display: none;">
+                    <!-- Template Configuration -->
+                    <div class="mb-4" id="templateConfigSection" style="display: none;">
                         <h5>Template Configuration</h5>
-                        <div class="alert alert-warning">
-                            <i class="fas fa-cog me-2"></i>
-                            <strong>Template Detected:</strong> Your podcast has a template. Configure AI segments and other settings below.
+                        <div class="alert alert-info">
+                            <i class="fas fa-robot me-2"></i>
+                            <strong>AI Segments:</strong> Configure the AI prompts for your template segments. These will be used to generate dynamic content for your episode.
                         </div>
                         <div id="templateConfig">
                             <!-- Template configuration will be loaded here -->
@@ -154,6 +154,189 @@
 </div>
 
 <script>
+// Global variables
+let selectedTemplate = null;
+let availableVoices = [];
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadVoices();
+    setupTemplateSelection();
+    setupFileUpload();
+});
+
+// Load available voices
+function loadVoices() {
+    fetch('/api/v1/voices/', {
+        headers: {
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        availableVoices = data.voices || [];
+    })
+    .catch(error => {
+        console.error('Error loading voices:', error);
+    });
+}
+
+// Setup template selection
+function setupTemplateSelection() {
+    const templateSelect = document.getElementById('template_id');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', function() {
+            const templateId = this.value;
+            if (templateId) {
+                loadTemplateDetails(templateId);
+            } else {
+                hideTemplateConfig();
+            }
+        });
+    }
+}
+
+// Load template details and show AI prompts
+function loadTemplateDetails(templateId) {
+    fetch(`/api/v1/templates/${templateId}`, {
+        headers: {
+            'Authorization': 'Bearer {{ session.get("token", "") }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        selectedTemplate = data.template;
+        showTemplateConfig(selectedTemplate);
+    })
+    .catch(error => {
+        console.error('Error loading template:', error);
+        alert('Failed to load template details');
+    });
+}
+
+// Show template configuration with AI prompts
+function showTemplateConfig(template) {
+    const configSection = document.getElementById('templateConfigSection');
+    const configDiv = document.getElementById('templateConfig');
+    
+    if (!template.structure || !template.structure.segments) {
+        hideTemplateConfig();
+        return;
+    }
+    
+    let configHtml = '<div class="row g-3">';
+    
+    // Find AI segments and create prompt fields
+    template.structure.segments.forEach((segment, index) => {
+        if (segment.audio_source === 'ai' || segment.ai_prompt) {
+            configHtml += `
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-robot me-2"></i>
+                                ${segment.type.charAt(0).toUpperCase() + segment.type.slice(1)} AI Segment
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="ai_prompt_${index}" class="form-label">AI Prompt *</label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="ai_prompt_${index}" 
+                                    name="ai_prompt_${index}" 
+                                    rows="3" 
+                                    placeholder="Enter the prompt for AI to generate this ${segment.type} segment..."
+                                    required
+                                >${segment.ai_prompt || ''}</textarea>
+                                <div class="form-text">
+                                    Describe what you want the AI to say in this ${segment.type} segment. 
+                                    You can use variables like [EPISODE_TITLE], [PODCAST_NAME], etc.
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="ai_voice_${index}" class="form-label">Voice</label>
+                                    <select class="form-select" id="ai_voice_${index}" name="ai_voice_${index}">
+                                        <option value="">Select a voice...</option>
+                                        ${availableVoices.map(voice => 
+                                            `<option value="${voice.voice_id}" ${segment.ai_voice_id === voice.voice_id ? 'selected' : ''}>
+                                                ${voice.name}
+                                            </option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="ai_stability_${index}" class="form-label">Stability</label>
+                                    <input 
+                                        type="range" 
+                                        class="form-range" 
+                                        id="ai_stability_${index}" 
+                                        name="ai_stability_${index}" 
+                                        min="0" 
+                                        max="1" 
+                                        step="0.1" 
+                                        value="${segment.ai_stability || 0.5}"
+                                    >
+                                    <div class="form-text">Lower = more expressive, Higher = more stable</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    configHtml += '</div>';
+    
+    if (configHtml === '<div class="row g-3"></div>') {
+        configHtml = `
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                This template doesn't have any AI segments configured. 
+                <a href="/admin/templates/${template.id}/edit" class="alert-link">Edit the template</a> to add AI segments.
+            </div>
+        `;
+    }
+    
+    configDiv.innerHTML = configHtml;
+    configSection.style.display = 'block';
+}
+
+// Hide template configuration
+function hideTemplateConfig() {
+    document.getElementById('templateConfigSection').style.display = 'none';
+    selectedTemplate = null;
+}
+
+// Setup file upload display
+function setupFileUpload() {
+    const fileInput = document.getElementById('audio_files');
+    const fileList = document.getElementById('fileList');
+    
+    fileInput.addEventListener('change', function() {
+        const files = Array.from(this.files);
+        let html = '';
+        
+        files.forEach((file, index) => {
+            const size = (file.size / (1024 * 1024)).toFixed(1);
+            html += `
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-music me-2"></i>
+                        <strong>${file.name}</strong>
+                        <span class="text-muted">(${size} MB)</span>
+                    </div>
+                    <span class="badge bg-primary">${index + 1}</span>
+                </div>
+            `;
+        });
+        
+        fileList.innerHTML = html;
+    });
+}
+
 document.getElementById('episodeForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -256,50 +439,31 @@ function collectTemplateConfig() {
         ai_segments: []
     };
     
+    if (!selectedTemplate || !selectedTemplate.structure || !selectedTemplate.structure.segments) {
+        return config;
+    }
+    
     // Collect AI segment configurations
-    document.querySelectorAll('.ai-segment-config').forEach(segment => {
-        const segmentData = {
-            type: segment.dataset.segmentType,
-            prompt: segment.querySelector('input[placeholder*="prompt"]').value,
-            voice_id: segment.querySelector('select').value
-        };
-        if (segmentData.prompt && segmentData.voice_id) {
-            config.ai_segments.push(segmentData);
+    selectedTemplate.structure.segments.forEach((segment, index) => {
+        if (segment.audio_source === 'ai' || segment.ai_prompt) {
+            const promptField = document.getElementById(`ai_prompt_${index}`);
+            const voiceField = document.getElementById(`ai_voice_${index}`);
+            const stabilityField = document.getElementById(`ai_stability_${index}`);
+            
+            if (promptField && promptField.value.trim()) {
+                config.ai_segments.push({
+                    segment_index: index,
+                    segment_type: segment.type,
+                    ai_prompt: promptField.value.trim(),
+                    ai_voice_id: voiceField ? voiceField.value : segment.ai_voice_id,
+                    ai_stability: stabilityField ? parseFloat(stabilityField.value) : segment.ai_stability || 0.5
+                });
+            }
         }
     });
     
     return config;
 }
-
-// File handling
-document.getElementById('audio_files').addEventListener('change', function(e) {
-    const files = Array.from(e.target.files);
-    const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
-    const fileList = document.getElementById('fileList');
-    
-    fileList.innerHTML = '';
-    
-    files.forEach((file, index) => {
-        if (file.size > maxSize) {
-            alert(`File ${file.name} is too large. Maximum size is 2GB.`);
-            return;
-        }
-        
-        const fileItem = document.createElement('div');
-        fileItem.className = 'alert alert-info d-flex justify-content-between align-items-center';
-        fileItem.innerHTML = `
-            <div>
-                <strong>${file.name}</strong>
-                <br><small class="text-muted">${(file.size / (1024 * 1024)).toFixed(1)} MB</small>
-            </div>
-            <span class="badge bg-primary">${index + 1}</span>
-        `;
-        fileList.appendChild(fileItem);
-    });
-    
-    // Check if podcast has template and show template config
-    checkPodcastTemplate();
-});
 
 // Check if selected podcast has a template or if template is manually selected
 function checkPodcastTemplate() {
@@ -334,24 +498,24 @@ function checkPodcastTemplate() {
             if (data.podcast && data.podcast.default_template) {
                 loadTemplateConfig(data.podcast.default_template);
             } else {
-                document.getElementById('templateSection').style.display = 'none';
+                document.getElementById('templateConfigSection').style.display = 'none';
             }
         })
         .catch(error => {
             console.error('Error checking podcast template:', error);
         });
     } else {
-        document.getElementById('templateSection').style.display = 'none';
+        document.getElementById('templateConfigSection').style.display = 'none';
     }
 }
 
 // Load template configuration
 function loadTemplateConfig(template) {
-    const templateSection = document.getElementById('templateSection');
+    const templateConfigSection = document.getElementById('templateConfigSection');
     const templateConfig = document.getElementById('templateConfig');
     
     if (!template.structure || !template.structure.content || !template.structure.content.segments) {
-        templateSection.style.display = 'none';
+        templateConfigSection.style.display = 'none';
         return;
     }
     
@@ -385,34 +549,10 @@ function loadTemplateConfig(template) {
     
     configHtml += '</div>';
     templateConfig.innerHTML = configHtml;
-    templateSection.style.display = 'block';
+    templateConfigSection.style.display = 'block';
     
     // Load available voices
     loadVoices();
-}
-
-// Load available voices
-function loadVoices() {
-    fetch('/api/v1/voices/', {
-        headers: {
-            'Authorization': 'Bearer {{ session.get("token", "") }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        const voices = data.voices || [];
-        document.querySelectorAll('.ai-segment-config select').forEach(select => {
-            voices.forEach(voice => {
-                const option = document.createElement('option');
-                option.value = voice.id;
-                option.textContent = voice.name;
-                select.appendChild(option);
-            });
-        });
-    })
-    .catch(error => {
-        console.error('Error loading voices:', error);
-    });
 }
 
 // Check template when podcast or template selection changes
