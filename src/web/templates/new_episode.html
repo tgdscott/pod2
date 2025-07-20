@@ -413,6 +413,7 @@ document.getElementById('episodeForm').addEventListener('submit', function(e) {
             audio_files: fileDataArray.map(data => data.file.id),
             transcribe: transcribe,
             apply_template: applyTemplate,
+            template_id: document.getElementById('template_id').value || null,
             template_config: templateConfig
         };
         
