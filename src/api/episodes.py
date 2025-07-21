@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.database import get_db_session
-from src.database.models_dev import Episode, Podcast, Template, Job, UserFile, User
+from src.database.models_dev import Episode, Podcast, Template, Job, UserFile, User, File
 from ..core import PodcastProcessor
 
 episodes_bp = Blueprint('episodes', __name__)
@@ -123,7 +123,7 @@ def create_episode():
         return {'error': 'Failed to create episode'}, 500
 
 
-@episodes_bp.route('/<episode_id>', methods=['GET'])
+@episodes_bp.route('<episode_id>', methods=['GET'])
 @jwt_required()
 def get_episode(episode_id):
     """Get specific episode"""
@@ -147,7 +147,7 @@ def get_episode(episode_id):
         return {'error': 'Failed to get episode'}, 500
 
 
-@episodes_bp.route('/<episode_id>', methods=['PUT'])
+@episodes_bp.route('<episode_id>', methods=['PUT'])
 @jwt_required()
 def update_episode(episode_id):
     """Update episode"""
@@ -184,15 +184,20 @@ def update_episode(episode_id):
         return {'error': 'Failed to update episode'}, 500
 
 
-@episodes_bp.route('/<episode_id>/process', methods=['POST'])
-@episodes_bp.route('/<episode_id>/process/', methods=['POST'])
+@episodes_bp.route('<episode_id>/process', methods=['POST'])
+@episodes_bp.route('<episode_id>/process/', methods=['POST'])
 @jwt_required()
 def process_episode(episode_id):
-    """Start processing episode"""
+    import sys
+    print(f"[TRACE] process_episode called for episode_id={episode_id}", file=sys.stderr)
     try:
         user_id = get_jwt_identity()
         db = get_db_session()
         data = request.get_json() or {}
+
+        print(f"[TRACE] user_id={user_id}, episode_id={episode_id}", file=sys.stderr)
+        # DEBUG: Print user_id and episode_id
+        print(f"[DEBUG] process_episode: user_id={user_id}, episode_id={episode_id}")
 
         # Get episode with ownership check
         episode = db.query(Episode).join(Podcast).filter(
@@ -200,15 +205,24 @@ def process_episode(episode_id):
             Podcast.user_id == user_id
         ).first()
 
+        # DEBUG: Print if episode was found
+        print(f"[DEBUG] process_episode: episode found? {bool(episode)}")
+
         if not episode:
+            print(f"[DEBUG] process_episode: Episode not found for user {user_id}")
             return {'error': 'Episode not found'}, 404
 
+        print("[DEBUG] process_episode: Passed episode check")
+
         if episode.status == 'processing':
+            print("[DEBUG] process_episode: Episode already processing")
             return {'error': 'Episode is already being processed'}, 400
 
         # Get user for API keys
         user = db.query(User).get(user_id)
+        print(f"[DEBUG] process_episode: user found? {bool(user)}")
         if not user:
+            print(f"[DEBUG] process_episode: User not found: {user_id}")
             return {'error': 'User not found'}, 404
 
         # Get template if specified
@@ -218,35 +232,51 @@ def process_episode(episode_id):
                 id=episode.template_id,
                 user_id=user_id
             ).first()
-
+            print(f"[DEBUG] process_episode: template found? {bool(template)}")
             if not template:
+                print(f"[DEBUG] process_episode: Template not found: {episode.template_id}")
                 return {'error': 'Template not found'}, 404
 
         # Validate audio files exist
         audio_files = []
         for file_id in episode.audio_files:
+            # Try UserFile first (legacy)
             user_file = db.query(UserFile).filter_by(
                 id=file_id,
                 user_id=user_id,
                 file_type='audio'
             ).first()
+            if user_file:
+                upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
+                file_path = upload_path / user_file.file_path
+                if not file_path.exists():
+                    print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (UserFile)")
+                    return {'error': f'Audio file {file_id} not found on disk'}, 404
+                audio_files.append(str(file_path))
+                continue
+            # Try File table (new)
+            file = db.query(File).filter_by(
+                id=file_id,
+                user_id=user_id
+            ).first()
+            if file:
+                upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
+                file_path = upload_path / file.file_path
+                if not file_path.exists():
+                    print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (File)")
+                    return {'error': f'Audio file {file_id} not found on disk'}, 404
+                audio_files.append(str(file_path))
+                continue
+            print(f"[DEBUG] process_episode: Audio file {file_id} not found in UserFile or File table")
+            return {'error': f'Audio file {file_id} not found'}, 404
 
-            if not user_file:
-                return {'error': f'Audio file {file_id} not found'}, 404
-
-            # Get full file path
-            upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
-            file_path = upload_path / user_file.file_path
-
-            if not file_path.exists():
-                return {'error': f'Audio file {file_id} not found on disk'}, 404
-
-            audio_files.append(str(file_path))
-
+        print(f"[DEBUG] process_episode: audio_files list: {audio_files}")
         if not audio_files:
+            print("[DEBUG] process_episode: No valid audio files found")
             return {'error': 'No valid audio files found'}, 400
 
         # Create processing job
+        print("[DEBUG] process_episode: Creating job")
         job = Job(
             id=str(uuid.uuid4()),
             user_id=user_id,
@@ -268,45 +298,33 @@ def process_episode(episode_id):
         episode.updated_at = datetime.now(timezone.utc)
 
         db.commit()
+        print("[DEBUG] process_episode: Job created and committed")
 
         # Start background processing with Celery
         try:
-            # Re-get the db session to ensure it's fresh for the Celery task context if needed
-            # This line might not be strictly necessary if get_db_session always returns a new session
-            # or manages session lifecycle correctly for background tasks.
-            # However, for demonstration, keeping it here as it was in the original.
-            db = get_db_session() 
+            db = get_db_session()
             from src.api.app import celery
-
-            # Queue episode processing task
+            print(f"[TRACE] About to send task to celery for episode_id={episode_id}", file=sys.stderr)
             task = celery.send_task(
                 'podcast_tasks.process_episode',
                 args=[episode_id, user_id, job.id],
                 queue='episode_processing'
             )
-
-            # Store task ID in job
+            print(f"[TRACE] Task sent to celery with id {task.id}", file=sys.stderr)
             job.task_id = task.id
             db.commit()
-
-            current_app.logger.info(f"Queued episode processing task {task.id} for episode {episode_id}")
-
+            print(f"[TRACE] Job committed with celery task id {task.id}", file=sys.stderr)
         except Exception as queue_error:
-            current_app.logger.error(f"Failed to queue episode processing: {str(queue_error)}")
-
-            # Update job with error
+            print(f"[TRACE] Celery queue error: {queue_error}", file=sys.stderr)
             job.status = 'failed'
             job.error_message = f"Failed to start processing: {str(queue_error)}"
             job.completed_at = datetime.now(timezone.utc)
-
-            # Update episode
             episode.status = 'failed'
             episode.updated_at = datetime.now(timezone.utc)
-
             db.commit()
-
             return {'error': f'Failed to start processing: {str(queue_error)}'}, 500
 
+        print("[DEBUG] process_episode: Returning success response")
         return {
             'message': 'Episode processing started',
             'job_id': job.id,
@@ -315,13 +333,13 @@ def process_episode(episode_id):
         }
 
     except Exception as e:
-        current_app.logger.error(f"Episode processing start error: {str(e)}")
+        print(f"[DEBUG] process_episode: Exception: {e}")
         import traceback
-        current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
+        print(f"[DEBUG] process_episode: Full traceback: {traceback.format_exc()}")
         return {'error': f'Failed to start processing: {str(e)}'}, 500
 
 
-@episodes_bp.route('/<episode_id>/download', methods=['GET'])
+@episodes_bp.route('<episode_id>/download', methods=['GET'])
 @jwt_required()
 def download_episode(episode_id):
     """Download processed episode"""
@@ -358,7 +376,7 @@ def download_episode(episode_id):
         return {'error': 'Failed to download episode'}, 500
 
 
-@episodes_bp.route('/<episode_id>', methods=['DELETE'])
+@episodes_bp.route('<episode_id>', methods=['DELETE'])
 @jwt_required()
 def delete_episode(episode_id):
     """Delete episode"""
@@ -395,7 +413,7 @@ def delete_episode(episode_id):
         return {'error': 'Failed to delete episode'}, 500
 
 
-@episodes_bp.route('/<episode_id>/generate-show-notes', methods=['POST'])
+@episodes_bp.route('<episode_id>/generate-show-notes', methods=['POST'])
 @jwt_required()
 def generate_show_notes(episode_id):
     """Generate show notes for episode using AI"""
@@ -457,7 +475,7 @@ def generate_show_notes(episode_id):
         return {'error': str(e)}, 500
 
 
-@episodes_bp.route('/<episode_id>/transcribe', methods=['POST'])
+@episodes_bp.route('<episode_id>/transcribe', methods=['POST'])
 @jwt_required()
 def transcribe_episode(episode_id):
     """Transcribe episode audio using AI"""
