@@ -110,7 +110,10 @@ def create_app(config_name: str = 'development') -> Flask:
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
-        return {'error': 'Resource not found'}, 404
+        import sys
+        from flask import request
+        print(f"404 Not Found: {request.method} {request.path}", file=sys.stderr)
+        return {'error': 'Resource not found', 'path': request.path, 'method': request.method}, 404
     
     @app.errorhandler(500)
     def internal_error(error):
@@ -136,10 +139,7 @@ def create_app(config_name: str = 'development') -> Flask:
     # Initialize Celery
     global celery
     celery = make_celery(app)
-    
-    # Register Celery tasks
-    from src.core.tasks import register_tasks
-    register_tasks(celery)
+    # No need to call register_tasks; tasks are registered at module level
 
     @app.route('/api/v1/debug/routes')
     def debug_routes():
