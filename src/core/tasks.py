@@ -12,7 +12,7 @@ def register_tasks(celery_app):
     """Register all Celery tasks with the app"""
     
     @celery_app.task(bind=True, name='podcast_tasks.process_episode')
-    def process_episode_task(self, episode_id, podcast_id, user_id):
+    def process_episode_task(self, episode_id, user_id, job_id):
         """Background task to process an episode"""
         try:
             logger.info(f"Starting episode processing task for episode_id={episode_id}")
