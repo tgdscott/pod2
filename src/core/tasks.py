@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def register_tasks(celery_app):
     """Register all Celery tasks with the app"""
     
-    @celery_app.task(bind=True)
+    @celery_app.task(bind=True, name='podcast_tasks.process_episode')
     def process_episode_task(self, episode_id, podcast_id, user_id):
         """Background task to process an episode"""
         try:
