@@ -35,7 +35,7 @@ def create_app(config_name: str = 'development') -> Flask:
         'DATABASE_POOL_SIZE': int(os.getenv('DATABASE_POOL_SIZE', 10)),
         'DATABASE_POOL_TIMEOUT': int(os.getenv('DATABASE_POOL_TIMEOUT', 30)),
         
-        'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+        'REDIS_URL': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0'),
         
         'UPLOAD_FOLDER': os.getenv('UPLOAD_FOLDER', 'uploads'),
         'OUTPUT_FOLDER': os.getenv('OUTPUT_FOLDER', 'outputs'),
