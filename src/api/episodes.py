@@ -303,10 +303,9 @@ def process_episode(episode_id):
         # Start background processing with Celery
         try:
             db = get_db_session()
-            from src.api.app import celery
+            from src.core.tasks import process_episode_task
             print(f"[TRACE] About to send task to celery for episode_id={episode_id}", file=sys.stderr)
-            task = celery.send_task(
-                'podcast_tasks.process_episode',
+            task = process_episode_task.apply_async(
                 args=[episode_id, user_id, job.id],
                 queue='episode_processing'
             )
