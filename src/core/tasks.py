@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 def register_tasks(celery_app):
     """Register all Celery tasks with the app"""
+    import inspect
+    print("[DEBUG] register_tasks called in Celery worker startup")
     
     @celery_app.task(bind=True, name='podcast_tasks.process_episode')
     def process_episode_task(self, episode_id, user_id, job_id):
@@ -101,4 +103,6 @@ def register_tasks(celery_app):
             logger.error(f"Audio processing failed: {str(e)}")
             raise
     
+    print(f"[DEBUG] process_episode_task signature: {inspect.signature(process_episode_task)}")
+    print(f"[DEBUG] Registered tasks: {list(celery_app.tasks.keys())}")
     logger.info("Celery tasks registered successfully")
