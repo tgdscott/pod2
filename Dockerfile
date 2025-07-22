@@ -1,27 +1,23 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1
+FROM python:3.13-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsndfile1 \
+    python3-venv \
     build-essential \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
+WORKDIR /app
 
-# Copy project
-COPY . /app/
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port for Flask
+COPY . .
+
+# Expose Flask port
 EXPOSE 5000
 
-# Default command (can be overridden by docker-compose)
+# Default command (can be overridden)
 CMD ["python", "run.py"]

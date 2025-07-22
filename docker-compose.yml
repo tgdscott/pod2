@@ -14,20 +14,30 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - FLASK_ENV=development
-    depends_on:
-      - redis
+      - FLASK_ENV=production
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
     volumes:
       - .:/app
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+    depends_on:
+      - redis
 
   worker:
     build: .
     container_name: podcastpro-worker
-    command: celery -A src.core.celery_config.celery worker --loglevel=info
+    command: celery -A src.api.app.celery worker --loglevel=info
     environment:
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - redis
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
     volumes:
       - .:/app
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+    depends_on:
+      - redis
