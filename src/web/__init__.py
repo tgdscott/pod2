@@ -268,7 +268,7 @@ def episode_detail(episode_id):
     if not episode:
         return redirect(url_for('web.episodes'))
     
-    return render_template('episode_detail.html', episode=episode)
+    return render_template('episode_detail.html', episode=episode, token=session.get('token'))
 
 @web_bp.route('/admin')
 def admin():

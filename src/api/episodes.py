@@ -247,8 +247,8 @@ def process_episode(episode_id):
                 file_type='audio'
             ).first()
             if user_file:
-                upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
-                file_path = upload_path / user_file.file_path
+            upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
+            file_path = upload_path / user_file.file_path
                 if not file_path.exists():
                     print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (UserFile)")
                     return {'error': f'Audio file {file_id} not found on disk'}, 404
@@ -262,10 +262,10 @@ def process_episode(episode_id):
             if file:
                 upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
                 file_path = upload_path / file.file_path
-                if not file_path.exists():
+            if not file_path.exists():
                     print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (File)")
-                    return {'error': f'Audio file {file_id} not found on disk'}, 404
-                audio_files.append(str(file_path))
+                return {'error': f'Audio file {file_id} not found on disk'}, 404
+            audio_files.append(str(file_path))
                 continue
             print(f"[DEBUG] process_episode: Audio file {file_id} not found in UserFile or File table")
             return {'error': f'Audio file {file_id} not found'}, 404
@@ -302,7 +302,7 @@ def process_episode(episode_id):
 
         # Start background processing with Celery
         try:
-            db = get_db_session()
+            db = get_db_session() 
             from src.core.tasks import process_episode_task
             print(f"[TRACE] About to send task to celery for episode_id={episode_id}", file=sys.stderr)
             task = process_episode_task.apply_async(

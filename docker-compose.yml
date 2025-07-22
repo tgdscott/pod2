@@ -6,3 +6,28 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
+
+  web:
+    build: .
+    container_name: podcastpro-web
+    command: python run.py
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=development
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+
+  worker:
+    build: .
+    container_name: podcastpro-worker
+    command: celery -A src.core.celery_config.celery worker --loglevel=info
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    volumes:
+      - .:/app

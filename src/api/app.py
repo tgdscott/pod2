@@ -35,7 +35,7 @@ def create_app(config_name: str = 'development') -> Flask:
         'DATABASE_POOL_SIZE': int(os.getenv('DATABASE_POOL_SIZE', 10)),
         'DATABASE_POOL_TIMEOUT': int(os.getenv('DATABASE_POOL_TIMEOUT', 30)),
         
-        'REDIS_URL': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0'),
+        'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
         
         'UPLOAD_FOLDER': os.getenv('UPLOAD_FOLDER', 'uploads'),
         'OUTPUT_FOLDER': os.getenv('OUTPUT_FOLDER', 'outputs'),
@@ -55,6 +55,9 @@ def create_app(config_name: str = 'development') -> Flask:
         
         'SQLALCHEMY_ECHO': os.getenv('SQLALCHEMY_ECHO', 'False').lower() == 'true',
     })
+
+    # Debug print for REDIS_URL
+    print(f"[DEBUG] Flask app using REDIS_URL: {app.config['REDIS_URL']}")
     
     # Initialize extensions
     CORS(app, origins=["http://localhost:3000", "http://localhost:5000"])  # Add your frontend URLs
@@ -139,7 +142,10 @@ def create_app(config_name: str = 'development') -> Flask:
     # Initialize Celery
     global celery
     celery = make_celery(app)
-    # No need to call register_tasks; tasks are registered at module level
+    
+    # Register Celery tasks
+    from src.core.tasks import register_tasks
+    register_tasks(celery)
 
     @app.route('/api/v1/debug/routes')
     def debug_routes():
