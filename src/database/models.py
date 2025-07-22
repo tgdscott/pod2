@@ -551,6 +551,8 @@ class File(Base, TimestampMixin):
             'id': str(self.id),
             'file_path': self.file_path,
             'name': self.name,
+            'filename': self.name,  # for frontend compatibility
+            'db_name': self.name,   # for frontend compatibility
             'description': self.description,
             'category': self.category,
             'file_size': self.file_size,

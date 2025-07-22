@@ -33,6 +33,10 @@ if __name__ == '__main__':
         print("📋 API Documentation: See docs/API_SPEC.md")
         print("🏥 Health Check: http://localhost:5000/health")
         print()
+        print("Registered routes:")
+        for rule in app.url_map.iter_rules():
+            print(f"{sorted(rule.methods)} {rule.rule}")
+        print()
         print("Press Ctrl+C to stop the server")
         print("-" * 50)
         

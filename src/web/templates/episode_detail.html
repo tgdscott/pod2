@@ -130,6 +130,35 @@
     </div>
 
     <div class="col-lg-4">
+        <!-- Audio Files -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Audio Files</h6>
+            </div>
+            <div class="card-body">
+                <div id="audioFilesList">
+                    {% if episode.audio_files and episode.audio_files|length > 0 %}
+                        <ul class="list-group mb-3">
+                            {% for file_id in episode.audio_files %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span id="audio-file-name-{{ file_id }}">Loading...</span>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeAudioFile('{{ file_id }}')">Remove</button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-2">No audio files associated with this episode.</p>
+                    {% endif %}
+                </div>
+                <form id="audioUploadForm" enctype="multipart/form-data">
+                    <label for="audioUploadInput" class="form-label">Upload Audio File</label>
+                    <input type="file" class="form-control mb-2" id="audioUploadInput" name="file" accept="audio/*">
+                    <button type="submit" class="btn btn-primary btn-sm">Upload & Add to Episode</button>
+                </form>
+                <div id="audioUploadStatus" class="mt-2"></div>
+            </div>
+        </div>
+
         <!-- Processing History -->
         <div class="card mb-4">
             <div class="card-header">
@@ -161,10 +190,20 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    {% if episode.status == 'draft' %}
-                    <button class="btn btn-success" onclick="processEpisode()">
-                        <i class="fas fa-play me-2"></i>Process Episode
-                    </button>
+                    {% if episode.status == 'processing' %}
+                    <div class="alert alert-info d-flex align-items-center" role="alert" style="margin-bottom: 1em;">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <strong>Processing...</strong> Your episode is being processed. This may take a few minutes.
+                    </div>
+                    {% endif %}
+
+                    {% if episode.status == 'draft' or episode.status == 'failed' %}
+                        {% if episode.status != 'processing' %}
+                        <button class="btn btn-success" onclick="processEpisode()" id="process-episode-btn">
+                            <i class="fas fa-play me-2"></i>
+                            {% if episode.status == 'failed' %}Retry Processing{% else %}Process Episode{% endif %}
+                        </button>
+                        {% endif %}
                     {% endif %}
                     {% if episode.status == 'completed' %}
                     <a href="/episodes/{{ episode.id }}/download" class="btn btn-success">
@@ -450,5 +489,126 @@ setInterval(function() {
     location.reload();
 }, 5000); // Refresh every 5 seconds
 {% endif %}
+</script>
+
+<script>
+const episodeId = '{{ episode.id }}';
+const apiToken = '{{ token if token is defined else '' }}';
+
+// Fetch and display audio file names for associated files
+function fetchAudioFileNames() {
+    {% if episode.audio_files and episode.audio_files|length > 0 %}
+    {% for file_id in episode.audio_files %}
+    fetch(`/api/v1/files/{{ file_id }}`, {
+        headers: { 'Authorization': `Bearer ${apiToken}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.file && data.file.db_name) {
+            document.getElementById('audio-file-name-{{ file_id }}').textContent = data.file.db_name;
+        } else if (data && data.file && data.file.filename) {
+            document.getElementById('audio-file-name-{{ file_id }}').textContent = data.file.filename;
+        } else {
+            document.getElementById('audio-file-name-{{ file_id }}').textContent = 'Unknown file';
+        }
+    })
+    .catch(() => {
+        document.getElementById('audio-file-name-{{ file_id }}').textContent = 'Unknown file';
+    });
+    {% endfor %}
+    {% endif %}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetchAudioFileNames();
+    document.getElementById('audioUploadForm').addEventListener('submit', handleAudioUpload);
+});
+
+function handleAudioUpload(e) {
+    e.preventDefault();
+    const input = document.getElementById('audioUploadInput');
+    const statusDiv = document.getElementById('audioUploadStatus');
+    if (!input.files.length) {
+        statusDiv.textContent = 'Please select an audio file.';
+        return;
+    }
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    statusDiv.textContent = 'Uploading...';
+    fetch('/api/v1/files/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiToken}` },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.file && data.file.id) {
+            // Add file to episode
+            addAudioFileToEpisode(data.file.id);
+        } else {
+            statusDiv.textContent = data.error || 'Upload failed.';
+        }
+    })
+    .catch(() => {
+        statusDiv.textContent = 'Upload failed.';
+    });
+}
+
+function addAudioFileToEpisode(fileId) {
+    const statusDiv = document.getElementById('audioUploadStatus');
+    fetch(`/api/v1/episodes/${episodeId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ audio_files: [...getCurrentAudioFileIds(), fileId] })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.episode) {
+            statusDiv.textContent = 'Audio file added!';
+            location.reload();
+        } else {
+            statusDiv.textContent = data.error || 'Failed to add audio file.';
+        }
+    })
+    .catch(() => {
+        statusDiv.textContent = 'Failed to add audio file.';
+    });
+}
+
+function getCurrentAudioFileIds() {
+    // Get current audio file IDs from the DOM
+    const items = document.querySelectorAll('#audioFilesList li span[id^="audio-file-name-"]');
+    return Array.from(items).map(span => span.id.replace('audio-file-name-', ''));
+}
+
+function removeAudioFile(fileId) {
+    if (!confirm('Remove this audio file from the episode?')) return;
+    const statusDiv = document.getElementById('audioUploadStatus');
+    const currentIds = getCurrentAudioFileIds().filter(id => id !== fileId);
+    fetch(`/api/v1/episodes/${episodeId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ audio_files: currentIds })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.episode) {
+            statusDiv.textContent = 'Audio file removed.';
+            location.reload();
+        } else {
+            statusDiv.textContent = data.error || 'Failed to remove audio file.';
+        }
+    })
+    .catch(() => {
+        statusDiv.textContent = 'Failed to remove audio file.';
+    });
+}
 </script>
 {% endblock %}

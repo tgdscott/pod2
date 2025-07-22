@@ -171,9 +171,9 @@ def upload_file():
             
             db.add(db_file)
             db.commit()
-            
-            return {
-                'message': 'File uploaded successfully',
+        
+        return {
+            'message': 'File uploaded successfully',
                 'file': {
                     'id': str(db_file.id),
                     'name': filename,
@@ -183,7 +183,7 @@ def upload_file():
                     'category': category,
                     'description': description
                 }
-            }, 201
+        }, 201
             
         finally:
             db.close()
@@ -334,11 +334,11 @@ def download_file(file_id):
             user_file = db.query(UserFile).filter(
                 UserFile.id == file_id,
                 UserFile.user_id == user_id
-            ).first()
-            
-            if not user_file:
-                return {'error': 'File not found'}, 404
-            
+        ).first()
+        
+        if not user_file:
+            return {'error': 'File not found'}, 404
+        
             file_path = Path(current_app.config['UPLOAD_FOLDER']) / user_file.file_path
             
             if not file_path.exists():
@@ -352,7 +352,7 @@ def download_file(file_id):
             
         finally:
             db.close()
-        
+            
     except Exception as e:
         current_app.logger.error(f"Download file error: {str(e)}")
         return {'error': 'Failed to download file'}, 500
