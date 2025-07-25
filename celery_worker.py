@@ -1,4 +1,4 @@
-from src.api.app import create_app, celery
+from api.app import create_app, celery
 
 app = create_app()
 

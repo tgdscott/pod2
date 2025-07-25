@@ -5,8 +5,9 @@ Celery background tasks for PodcastPro v2
 import logging
 from datetime import datetime, timezone
 from celery import shared_task
-from src.core.advanced_audio_processor import AdvancedAudioProcessor
-from src.database.models import Episode, Podcast, Template, get_db_session
+from core.advanced_audio_processor import AdvancedAudioProcessor
+from database.models import Episode, Podcast, Template
+from database import get_db_session
 
 logger = logging.getLogger(__name__)
 
@@ -69,31 +70,31 @@ def process_episode_task(self, episode_id, user_id, job_id):
 
 
 @shared_task(bind=True)
-    def generate_show_notes_task(self, episode_id, user_id):
-        try:
-            logger.info(f"Starting show notes generation for episode_id={episode_id}")
-            return {
-                'episode_id': episode_id,
-                'status': 'completed',
-                'show_notes': 'Generated show notes would appear here...',
-                'completed_at': datetime.now(timezone.utc).isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Show notes generation failed: {str(e)}")
-            raise
-    
+def generate_show_notes_task(self, episode_id, user_id):
+    try:
+        logger.info(f"Starting show notes generation for episode_id={episode_id}")
+        return {
+            'episode_id': episode_id,
+            'status': 'completed',
+            'show_notes': 'Generated show notes would appear here...',
+            'completed_at': datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Show notes generation failed: {str(e)}")
+        raise
+
 @shared_task(bind=True)
-    def process_audio_file_task(self, file_id, user_id):
-        try:
-            logger.info(f"Starting audio processing for file_id={file_id}")
-            return {
-                'file_id': file_id,
-                'status': 'completed',
-                'message': 'Audio file processed successfully',
-                'completed_at': datetime.now(timezone.utc).isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Audio processing failed: {str(e)}")
-            raise
-    
+def process_audio_file_task(self, file_id, user_id):
+    try:
+        logger.info(f"Starting audio processing for file_id={file_id}")
+        return {
+            'file_id': file_id,
+            'status': 'completed',
+            'message': 'Audio file processed successfully',
+            'completed_at': datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Audio processing failed: {str(e)}")
+        raise
+
 logger.info("Celery tasks registered at module level.")

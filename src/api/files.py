@@ -16,13 +16,13 @@ import json
 import shutil
 from datetime import datetime
 
-from src.database import get_db_session
-from src.database.models_dev import UserFile, User
-from src.database.models import File
-from src.database import get_db_session
+from database import get_db_session
+from database.models_dev import UserFile, User
+from database.models import File
+from database import get_db_session
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.database import get_db_session
-from src.database.models_dev import User
+from database import get_db_session
+from database.models_dev import User
 
 files_bp = Blueprint('files', __name__)
 
@@ -103,7 +103,8 @@ def get_file_info(file_path):
 @files_bp.route('/upload', methods=['POST'])
 @jwt_required()
 def upload_file():
-    """Upload a file"""
+    """Upload a single file (audio or image)"""
+    db = get_db_session()
     try:
         user_id = get_jwt_identity()
         
@@ -152,7 +153,6 @@ def upload_file():
         extract_metadata = request.form.get('extract_metadata', 'true').lower() == 'true'
         
         # Save to database using new File model
-        db = get_db_session()
         try:
             relative_path = str(file_path.relative_to(Path(current_app.config['UPLOAD_FOLDER'])))
             relative_path = relative_path.replace('\\', '/').replace('\x00', '')
@@ -172,8 +172,8 @@ def upload_file():
             db.add(db_file)
             db.commit()
         
-        return {
-            'message': 'File uploaded successfully',
+            return {
+                'message': 'File uploaded successfully',
                 'file': {
                     'id': str(db_file.id),
                     'name': filename,
@@ -183,16 +183,18 @@ def upload_file():
                     'category': category,
                     'description': description
                 }
-        }, 201
+            }, 201
             
-        finally:
-            db.close()
-        
+        except Exception as e:
+            current_app.logger.error(f"Upload error: {str(e)}")
+            return {'error': 'Failed to upload file'}, 500
     except RequestEntityTooLarge:
         return {'error': 'File too large'}, 413
     except Exception as e:
         current_app.logger.error(f"Upload error: {str(e)}")
         return {'error': 'Failed to upload file'}, 500
+    finally:
+        db.close()
 
 
 @files_bp.route('/upload/audio', methods=['POST'])
@@ -291,109 +293,29 @@ def upload_audio_files():
 @files_bp.route('/<file_id>', methods=['GET'])
 @jwt_required()
 def get_file(file_id):
-    """Get a specific file (supports both File and UserFile tables)"""
-    try:
-        user_id = get_jwt_identity()
-        db = get_db_session()
-        try:
-            # Try new File table first
-            file = db.query(File).filter(
-                File.id == file_id,
-                File.user_id == user_id
-            ).first()
-            if file:
-                return {
-                    'file': file.to_dict()
-                }
-            # Fallback to legacy UserFile table
-            user_file = db.query(UserFile).filter(
-                UserFile.id == file_id,
-                UserFile.user_id == user_id
-            ).first()
-            if user_file:
-                return {
-                    'file': user_file.to_dict()
-                }
-            return {'error': 'File not found'}, 404
-        finally:
-            db.close()
-    except Exception as e:
-        current_app.logger.error(f"Get file error: {str(e)}")
-        return {'error': 'Failed to get file'}, 500
-
-
-@files_bp.route('/<file_id>/download', methods=['GET'])
-@jwt_required()
-def download_file(file_id):
     """Download a file"""
+    db = get_db_session()
     try:
         user_id = get_jwt_identity()
-        db = get_db_session()
-        
-        try:
-            user_file = db.query(UserFile).filter(
-                UserFile.id == file_id,
-                UserFile.user_id == user_id
+        user_file = db.query(UserFile).filter(
+            UserFile.id == file_id,
+            UserFile.user_id == user_id
         ).first()
-        
         if not user_file:
             return {'error': 'File not found'}, 404
-        
-            file_path = Path(current_app.config['UPLOAD_FOLDER']) / user_file.file_path
-            
-            if not file_path.exists():
-                return {'error': 'File not found on disk'}, 404
-            
-            return send_file(
-                file_path,
-                as_attachment=True,
-                download_name=user_file.original_filename
-            )
-            
-        finally:
-            db.close()
-            
+        file_path = Path(current_app.config['UPLOAD_FOLDER']) / user_file.file_path
+        if not file_path.exists():
+            return {'error': 'File not found on disk'}, 404
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=user_file.original_filename
+        )
     except Exception as e:
         current_app.logger.error(f"Download file error: {str(e)}")
         return {'error': 'Failed to download file'}, 500
-
-
-@files_bp.route('/<file_id>', methods=['DELETE'])
-@jwt_required()
-def delete_file(file_id):
-    """Delete a file"""
-    try:
-        user_id = get_jwt_identity()
-        db = get_db_session()
-        
-        try:
-            user_file = db.query(UserFile).filter(
-                UserFile.id == file_id,
-                UserFile.user_id == user_id
-            ).first()
-            
-            if not user_file:
-                return {'error': 'File not found'}, 404
-            
-            # Delete file from disk
-            file_path = Path(current_app.config['UPLOAD_FOLDER']) / user_file.file_path
-            if file_path.exists():
-                file_path.unlink()
-            
-            # Delete from database
-            db.delete(user_file)
-            db.commit()
-            
-            return {
-                'message': 'File deleted successfully'
-            }
-            
-        finally:
-            db.close()
-        
-    except Exception as e:
-        current_app.logger.error(f"Delete file error: {str(e)}")
-        return {'error': 'Failed to delete file'}, 500
+    finally:
+        db.close()
 
 
 @files_bp.route('/', methods=['GET'])

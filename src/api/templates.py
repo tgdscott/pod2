@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from src.database import get_db_session
-from src.database.models_dev import Template, User
+from database import get_db_session
+from database.models_dev import Template, User
 
 templates_bp = Blueprint('templates', __name__)
 

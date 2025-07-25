@@ -9,9 +9,10 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from src.database import get_db_session
-from src.database.models_dev import Episode, Podcast, Template, Job, UserFile, User, File
-from ..core import PodcastProcessor
+from database import get_db_session
+from database.models_dev import Episode, Podcast, Template, Job, UserFile, User, File
+from core.tasks import process_episode_task
+# Removed 'from api.app import celery' to fix circular import
 
 episodes_bp = Blueprint('episodes', __name__)
 
@@ -247,8 +248,8 @@ def process_episode(episode_id):
                 file_type='audio'
             ).first()
             if user_file:
-            upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
-            file_path = upload_path / user_file.file_path
+                upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
+                file_path = upload_path / user_file.file_path
                 if not file_path.exists():
                     print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (UserFile)")
                     return {'error': f'Audio file {file_id} not found on disk'}, 404
@@ -262,10 +263,10 @@ def process_episode(episode_id):
             if file:
                 upload_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads'))
                 file_path = upload_path / file.file_path
-            if not file_path.exists():
+                if not file_path.exists():
                     print(f"[DEBUG] process_episode: Audio file {file_id} not found on disk (File)")
-                return {'error': f'Audio file {file_id} not found on disk'}, 404
-            audio_files.append(str(file_path))
+                    return {'error': f'Audio file {file_id} not found on disk'}, 404
+                audio_files.append(str(file_path))
                 continue
             print(f"[DEBUG] process_episode: Audio file {file_id} not found in UserFile or File table")
             return {'error': f'Audio file {file_id} not found'}, 404

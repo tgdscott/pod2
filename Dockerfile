@@ -11,11 +11,19 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+ENV PYTHONPATH=/app/src
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the entire project
 COPY . .
+
+# Install the src package in development mode
+RUN pip install -e src
+
+# Set working directory to src for the application
+WORKDIR /app/src
 
 # Expose Flask port
 EXPOSE 5000

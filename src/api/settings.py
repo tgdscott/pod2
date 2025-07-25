@@ -5,8 +5,9 @@ User Settings Management API
 import requests
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.database import get_db_session
-from src.database.models import User
+from database import get_db_session
+from database.models import User
+from database.models import File
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -224,7 +225,6 @@ def get_storage_info():
         db = get_db_session()
         
         # Get user's files
-        from src.database.models import File
         user_files = db.query(File).filter(File.user_id == current_user_id).all()
         
         # Calculate total size

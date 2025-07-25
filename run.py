@@ -11,9 +11,10 @@ from pathlib import Path
 # Add project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
 # Import after path setup
-from src.api.app import create_app
+from api.app import create_app
 
 if __name__ == '__main__':
     print("🎙️  Starting PodcastPro v2 Development Server")

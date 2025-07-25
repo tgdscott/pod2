@@ -43,8 +43,9 @@ def recreate_database():
     
     # Import database modules
     try:
-        from src.database import init_database
-        from src.database.models_dev import Base
+        from database import init_database, get_db_session
+        from database.models_dev import Base, User, Podcast, Episode
+        from api.app import create_app
         print("✅ Database modules imported")
     except ImportError as e:
         print(f"❌ Import error: {e}")
@@ -55,7 +56,6 @@ def recreate_database():
         print("🔨 Creating new database...")
         
         # Create a Flask app for database initialization
-        from src.api.app import create_app
         app = create_app('development')
         
         with app.app_context():
@@ -86,8 +86,8 @@ def test_database():
     print("=" * 50)
     
     try:
-        from src.database import get_db_session
-        from src.database.models_dev import User, Podcast, Episode
+        from database import get_db_session
+        from database.models_dev import User, Podcast, Episode
         
         # Test database connection
         db = get_db_session()

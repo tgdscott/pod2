@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from src.database import get_db_session
-from src.database.models_dev import Job, User
+from database import get_db_session
+from database.models_dev import Job, User
 
 jobs_bp = Blueprint('jobs', __name__)
 

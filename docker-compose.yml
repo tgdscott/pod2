@@ -1,43 +1,40 @@
 version: '3.8'
 services:
   redis:
-    image: redis:7.2-alpine
-    container_name: podcastpro-redis
+    image: redis:7
     ports:
       - "6379:6379"
-    restart: unless-stopped
 
   web:
     build: .
-    container_name: podcastpro-web
     command: python run.py
     ports:
       - "5000:5000"
-    environment:
-      - FLASK_ENV=production
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
     volumes:
-      - .:/app
       - ./uploads:/app/uploads
       - ./outputs:/app/outputs
+      - ./test_files:/app/test_files
+      - ./podcastpro_dev.db:/app/podcastpro_dev.db
+    env_file:
+      - .env
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app/src
     depends_on:
       - redis
 
-  worker:
+  celery:
     build: .
-    container_name: podcastpro-worker
-    command: celery -A src.api.app.celery worker --loglevel=info
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+    command: celery -A core.celery_worker.celery worker --loglevel=info
     volumes:
-      - .:/app
       - ./uploads:/app/uploads
       - ./outputs:/app/outputs
+      - ./test_files:/app/test_files
+      - ./podcastpro_dev.db:/app/podcastpro_dev.db
+    env_file:
+      - .env
+    working_dir: /app/src
+    environment:
+      - PYTHONPATH=/app/src
     depends_on:
       - redis

@@ -9,8 +9,8 @@ def make_celery(app):
     """Create and configure Celery instance"""
     celery = Celery(
         app.import_name,
-        backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
-        broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+        backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6380/0'),
+        broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6380/0')
     )
     
     # Update configuration from Flask app

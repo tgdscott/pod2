@@ -5,8 +5,8 @@ ElevenLabs Voice Management API
 import requests
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from src.database import get_db_session
-from src.database.models import User
+from database import get_db_session
+from database.models import User
 
 voices_bp = Blueprint('voices', __name__)
 

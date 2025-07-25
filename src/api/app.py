@@ -9,8 +9,17 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 
-from src.database import init_database
-from src.core.celery_config import make_celery
+from database import init_database
+from core.celery_config import make_celery
+from api.auth import auth_bp
+from api.podcasts import podcasts_bp
+from api.episodes import episodes_bp
+from api.templates import templates_bp
+from api.jobs import jobs_bp
+from api.files import files_bp
+from api.voices import voices_bp
+from api.settings import settings_bp
+from web import web_bp
 
 # Global Celery instance
 celery = None
@@ -35,7 +44,7 @@ def create_app(config_name: str = 'development') -> Flask:
         'DATABASE_POOL_SIZE': int(os.getenv('DATABASE_POOL_SIZE', 10)),
         'DATABASE_POOL_TIMEOUT': int(os.getenv('DATABASE_POOL_TIMEOUT', 30)),
         
-        'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+        'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6380/0'),
         
         'UPLOAD_FOLDER': os.getenv('UPLOAD_FOLDER', 'uploads'),
         'OUTPUT_FOLDER': os.getenv('OUTPUT_FOLDER', 'outputs'),
@@ -73,17 +82,6 @@ def create_app(config_name: str = 'development') -> Flask:
     init_database(app)
     
     # Register blueprints
-    from src.api.auth import auth_bp
-    from src.api.podcasts import podcasts_bp
-    from src.api.episodes import episodes_bp
-    from src.api.templates import templates_bp
-    from src.api.jobs import jobs_bp
-    from src.api.files import files_bp
-    from src.api.voices import voices_bp
-    from src.api.settings import settings_bp
-    from src.web import web_bp
-    
-    # API routes with versioning
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(podcasts_bp, url_prefix='/api/v1/podcasts')
     app.register_blueprint(episodes_bp, url_prefix='/api/v1/episodes')
@@ -144,9 +142,7 @@ def create_app(config_name: str = 'development') -> Flask:
     celery = make_celery(app)
     
     # Register Celery tasks
-    from src.core.tasks import register_tasks
-    register_tasks(celery)
-
+    
     @app.route('/api/v1/debug/routes')
     def debug_routes():
         output = []

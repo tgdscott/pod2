@@ -10,8 +10,8 @@ from flask_jwt_extended import (
     create_refresh_token, get_jwt
 )
 
-from src.database import get_db_session
-from src.database.models_dev import User
+from database import get_db_session
+from database.models_dev import User
 
 auth_bp = Blueprint('auth', __name__)
 
